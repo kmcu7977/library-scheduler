@@ -1,10 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { initializeApp } from "firebase/app";
 import { getDatabase, ref, set, get } from "firebase/database";
-
-// xlsx는 index.html CDN으로 로드됩니다 (import 블록 이후 선언)
-// eslint-disable-next-line no-undef
-const XLSX = window.XLSX;
+import * as XLSX from "xlsx";
 
 const firebaseConfig = {
   apiKey:            "AIzaSyBfMCrCsoMUrJQW9zGpRZvVbcghRUHvMfw",
@@ -269,20 +266,18 @@ function exportToExcel(schedule, members, timeSlots, cfg) {
 }
 
 // ─── 대체인원 툴팁 ────────────────────────────────────────────────────────────
-function SubTooltip({ members, day, si, fk, schedule, anchorRef, visible, timeSlots }) {
+function SubTooltip({ members, day, si, fk, schedule, mousePos, visible, timeSlots }) {
   const tooltipRef = useRef(null);
   const [pos, setPos] = useState({ top: 0, left: 0 });
   useEffect(() => {
-    if (!visible || !anchorRef.current || !tooltipRef.current) return;
-    const rect = anchorRef.current.getBoundingClientRect();
+    if (!visible || !tooltipRef.current) return;
     const tip  = tooltipRef.current.getBoundingClientRect();
-    let top  = rect.bottom + 4;
-    let left = rect.left + rect.width / 2 - tip.width / 2;
-    if (rect.bottom + tip.height + 8 > window.innerHeight) top = rect.top - tip.height - 4;
-    if (left < 4) left = 4;
-    if (left + tip.width > window.innerWidth - 4) left = window.innerWidth - tip.width - 4;
+    let top  = mousePos.y + 14;
+    let left = mousePos.x + 14;
+    if (top + tip.height + 8 > window.innerHeight) top = mousePos.y - tip.height - 8;
+    if (left + tip.width + 8 > window.innerWidth) left = mousePos.x - tip.width - 8;
     setPos({ top, left });
-  }, [visible, anchorRef]);
+  }, [visible, mousePos]);
   if (!visible) return null;
 
   const assignedInSlot = Object.values(schedule[day][si]).filter(Boolean);
@@ -317,9 +312,9 @@ function SubTooltip({ members, day, si, fk, schedule, anchorRef, visible, timeSl
               <div className="sub-section-label busy">⚠️ 타 층 배치 중</div>
               <div className="sub-chips">
                 {subsAssigned.map(m => (
-                  <div key={m.name} className="sub-chip" style={{ borderColor: m.color + "99", opacity: .7 }}>
+                  <div key={m.name} className="sub-chip" style={{ borderColor: m.color + "bb" }}>
                     <span className="sub-chip-dot" style={{ background: m.color }} />
-                    <span style={{ color: m.color + "aa", fontWeight: 700 }}>{m.name}</span>
+                    <span style={{ color: m.color, fontWeight: 700 }}>{m.name}</span>
                   </div>
                 ))}
               </div>
@@ -334,20 +329,21 @@ function SubTooltip({ members, day, si, fk, schedule, anchorRef, visible, timeSl
 // ─── 시간표 셀 ───────────────────────────────────────────────────────────────
 function ScheduleCell({ name, day, si, fk, members, schedule, onClick, active, timeSlots }) {
   const [hovered, setHovered] = useState(false);
-  const cellRef = useRef(null);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const color = members.find(m => m.name === name)?.color || "#aaa";
   return (
-    <td ref={cellRef}
+    <td
       className={`td-cell ${active ? "active-cell" : ""} ${!name ? "empty-cell" : ""}`}
       style={name ? { background: color + "28", color, fontWeight: 700 } : {}}
       onClick={onClick}
-      onMouseEnter={() => name && setHovered(true)}
+      onMouseEnter={e => { if (name) { setMousePos({ x: e.clientX, y: e.clientY }); setHovered(true); } }}
+      onMouseMove={e => { if (name) setMousePos({ x: e.clientX, y: e.clientY }); }}
       onMouseLeave={() => setHovered(false)}
     >
       {name || "·"}
       {hovered && name && (
         <SubTooltip members={members} day={day} si={si} fk={fk}
-          schedule={schedule} anchorRef={cellRef} visible={hovered} timeSlots={timeSlots} />
+          schedule={schedule} mousePos={mousePos} visible={hovered} timeSlots={timeSlots} />
       )}
     </td>
   );
@@ -998,13 +994,13 @@ export default function App() {
         .weekly-h { font-size: 12px; color: #546e7a; min-width: 62px; text-align: right; }
         .weekly-h.over { color: #ef5350; font-weight: 700; }
         .table-wrap { overflow-x: auto; border-radius: 12px; border: 1px solid #bae0f7; }
-        .sched-table { border-collapse: collapse; min-width: 900px; width: 100%; font-size: 13px; }
+        .sched-table { border-collapse: collapse; min-width: 1100px; width: 100%; font-size: 13px; }
         .sched-table th, .sched-table td { border: 1px solid #bae0f7; text-align: center; padding: 6px 4px; white-space: pre-line; }
         .th-time { background: #e3f2fd; color: #78909c; font-weight: 600; width: 96px; font-size: 12px; }
         .th-day { background: #1976d2; color: #fff; font-weight: 700; font-size: 14px; }
         .th-floor { background: #bbdefb; color: #1565c0; font-weight: 600; font-size: 11px; }
         .td-time { background: #e3f2fd; color: #78909c; font-size: 11px; font-weight: 500; width: 96px; line-height: 1.5; }
-        .td-cell { cursor: pointer; transition: filter .15s; font-size: 13px; min-width: 56px; position: relative; }
+        .td-cell { cursor: pointer; transition: filter .15s; font-size: 13px; min-width: 72px; position: relative; }
         .td-cell:hover { filter: brightness(.93); }
         .active-cell { outline: 2px solid #1976d2; outline-offset: -2px; }
         .empty-cell { color: #cfd8dc; }
