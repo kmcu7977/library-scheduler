@@ -42,7 +42,7 @@ async function loadFromFirebase() {
   try {
     const snap = await get(ref(db, DB_PATH));
     return snap.exists() ? snap.val() : null;
-  } catch (e) { console.error("Firebase 불러오기 실패:", e); return null; }
+  } catch (e) { console.error("Firebase 불러오기 실패:", e); throw e; }
 }
 
 // ─── 시간 슬롯 생성 ───────────────────────────────────────────────────────────
@@ -58,7 +58,7 @@ function buildTimeSlots(cfg) {
   slots.push({ label: `${fmtH(firstStartH)}~${fmtH(firstEndH)}`, startH: firstStartH, hours: firstDur });
   let cur = firstEndH, lunchCount = 0;
   const closeH = cfg.closeHour + cfg.closeMin / 60, dur = cfg.slotMins / 60;
-  while (cur + dur <= closeH + 0.001) {
+  while (cur + 0.001 < closeH) {
     const end = Math.min(cur + dur, closeH);
     let label = `${fmtH(cur)}~${fmtH(end)}`;
     if (cur >= 12 && cur < 13 && lunchCount === 0) { label += "\n(점심시간1)"; lunchCount++; }
@@ -120,10 +120,10 @@ function autoSchedule(members, timeSlots, cfg) {
       isAfternoonSlot(slot) && !isClassTime(m, day, pi, timeSlots) && weeklyHours[name] + slotH <= cfg.maxWeeklyHours
     ) : false;
   };
-  const lunchBreakUsed = (name, day) => {
+  const lunchBreakUsed = (name, day, currentSi) => {
     let n = 0;
     timeSlots.forEach((slot, pi) => {
-      if (isLunchSlot(slot) && !Object.values(schedule[day][pi]).filter(Boolean).includes(name)) n++;
+      if (pi < currentSi && isLunchSlot(slot) && !Object.values(schedule[day][pi]).filter(Boolean).includes(name)) n++;
     });
     return n;
   };
@@ -132,7 +132,7 @@ function autoSchedule(members, timeSlots, cfg) {
     if (!isLunchSlot(slot)) return false;
     if (!hasMorningWork(name, day)) return false;
     if (!hasAfternoonPotential(name, day, slot.hours)) return false;
-    if (lunchBreakUsed(name, day) >= 1) return false;
+    if (lunchBreakUsed(name, day, si) >= 1) return false;
     return timeSlots.slice(si).filter(isLunchSlot).length <= 1;
   };
   const canAssign = (name, day, si, slotH) => {
@@ -335,7 +335,7 @@ function ScheduleCell({ name, day, si, fk, members, schedule, onClick, active, t
     <td
       className={`td-cell ${active ? "active-cell" : ""} ${!name ? "empty-cell" : ""}`}
       style={name ? { background: color + "28", color, fontWeight: 700 } : {}}
-      onClick={onClick}
+      onClick={() => { setHovered(false); onClick(); }}
       onMouseEnter={e => { if (name) { setMousePos({ x: e.clientX, y: e.clientY }); setHovered(true); } }}
       onMouseMove={e => { if (name) setMousePos({ x: e.clientX, y: e.clientY }); }}
       onMouseLeave={() => setHovered(false)}
@@ -504,24 +504,24 @@ function MemberSetup({ members, setMembers, onNext, onBack }) {
       {members.length > 0 && (
         <div className="member-pref-table">
           <div className="pref-table-header">
-            <span style={{ minWidth: 24, fontSize: 11, color: "#3a4860" }}>No</span>
+            <span style={{ minWidth: 24, fontSize: 11, color: "#78909c" }}>No</span>
             <span className="pref-col-name">이름</span>
-            <span style={{ flex: 1, fontSize: 11, color: "#3a4860" }}>학과 / 학번</span>
-            <span style={{ minWidth: 110, fontSize: 11, color: "#3a4860" }}>연락처</span>
-            <span style={{ minWidth: 130, fontSize: 11, color: "#3a4860" }}>선호 층</span>
-            <span style={{ minWidth: 70, fontSize: 11, color: "#3a4860" }}>비고</span>
+            <span style={{ flex: 1, fontSize: 11, color: "#78909c" }}>학과 / 학번</span>
+            <span style={{ minWidth: 110, fontSize: 11, color: "#78909c" }}>연락처</span>
+            <span style={{ minWidth: 130, fontSize: 11, color: "#78909c" }}>선호 층</span>
+            <span style={{ minWidth: 70, fontSize: 11, color: "#78909c" }}>비고</span>
             <span style={{ minWidth: 28 }} />
           </div>
           {members.map((m, idx) => (
             <div key={m.name} className="pref-table-row" style={{ borderLeft: `3px solid ${m.color}` }}>
-              <span style={{ minWidth: 24, fontSize: 12, color: "#4a5878" }}>{idx + 1}</span>
+              <span style={{ minWidth: 24, fontSize: 12, color: "#546e7a" }}>{idx + 1}</span>
               <span className="pref-col-name" style={{ color: m.color, fontWeight: 700, cursor: "pointer" }}
                 title="클릭하여 수정" onClick={() => openEdit(m)}>{m.name}</span>
-              <span style={{ flex: 1, fontSize: 11, color: "#7080a0" }}>
-                {m.dept || <span style={{ color: "#2a3050" }}>—</span>}
-                {m.studentId && <span style={{ color: "#4a5878", marginLeft: 6 }}>({m.studentId})</span>}
+              <span style={{ flex: 1, fontSize: 11, color: "#607d8b" }}>
+                {m.dept || <span style={{ color: "#b0bec5" }}>—</span>}
+                {m.studentId && <span style={{ color: "#546e7a", marginLeft: 6 }}>({m.studentId})</span>}
               </span>
-              <span style={{ minWidth: 110, fontSize: 11, color: "#7080a0" }}>{m.phone || <span style={{ color: "#2a3050" }}>—</span>}</span>
+              <span style={{ minWidth: 110, fontSize: 11, color: "#607d8b" }}>{m.phone || <span style={{ color: "#b0bec5" }}>—</span>}</span>
               <div style={{ minWidth: 130, display: "flex", gap: 4 }}>
                 {FLOOR_OPTIONS.map(floor => (
                   <button key={floor}
@@ -532,7 +532,7 @@ function MemberSetup({ members, setMembers, onNext, onBack }) {
                   </button>
                 ))}
               </div>
-              <span style={{ minWidth: 70, fontSize: 11, color: "#e5c07b", overflow: "hidden", textOverflow: "ellipsis" }}>{m.note || ""}</span>
+              <span style={{ minWidth: 70, fontSize: 11, color: "#607d8b", overflow: "hidden", textOverflow: "ellipsis" }}>{m.note || ""}</span>
               <button className="remove-btn" onClick={() => setMembers(prev => prev.filter(x => x.name !== m.name))}>✕</button>
             </div>
           ))}
@@ -554,17 +554,17 @@ function MemberSetup({ members, setMembers, onNext, onBack }) {
                 { key: "note",      label: "비고",   ph: "특이사항" },
               ].map(({ key, label, ph }) => (
                 <div key={key} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <label style={{ minWidth: 44, fontSize: 12, color: "#8892b0" }}>{label}</label>
+                  <label style={{ minWidth: 44, fontSize: 12, color: "#546e7a" }}>{label}</label>
                   <input className="text-input" style={{ flex: 1, padding: "7px 10px", fontSize: 13 }}
                     placeholder={ph} value={editInfo[key]}
                     onChange={e => setEditInfo(prev => ({ ...prev, [key]: e.target.value }))} />
                 </div>
               ))}
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <label style={{ minWidth: 44, fontSize: 12, color: "#8892b0" }}>선호 층</label>
+                <label style={{ minWidth: 44, fontSize: 12, color: "#546e7a" }}>선호 층</label>
                 <div style={{ display: "flex", gap: 6 }}>
                   {FLOOR_OPTIONS.map(floor => {
-                    const color = members.find(m => m.name === editTarget)?.color || "#4a90d9";
+                    const color = members.find(m => m.name === editTarget)?.color || "#1976d2";
                     const sel = editInfo.preferFloor === floor;
                     return (
                       <button key={floor} className={"pref-floor-btn" + (sel ? " selected" : "")}
@@ -724,7 +724,7 @@ function ScheduleEditor({ members, schedule, setSchedule, onExport, onBack, time
           <div className="cell-popup" onClick={e => e.stopPropagation()}>
             <p className="popup-title">
               {editCell.day}요일 {timeSlots[editCell.si].label.split("\n")[0]}<br />
-              <span style={{ color: "#4a90d9" }}>{FLOOR_LABEL[editCell.fk]}</span> 담당자 변경
+              <span style={{ color: "#1976d2" }}>{FLOOR_LABEL[editCell.fk]}</span> 담당자 변경
             </p>
             <div className="popup-members">
               {members.map(m => {
@@ -826,16 +826,16 @@ export default function App() {
   const STEP_LABELS = ["운영 설정", "인원 등록", "수업 입력", "시간표"];
 
   if (loadStatus === "loading") return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "#0f1117", color: "#4a90d9", fontSize: 16, fontFamily: "Noto Sans KR, sans-serif" }}>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "#e8f4fd", color: "#1976d2", fontSize: 16, fontFamily: "Noto Sans KR, sans-serif" }}>
       불러오는 중...
     </div>
   );
 
   if (loadStatus === "error") return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", background: "#0f1117", color: "#e06c75", fontSize: 15, fontFamily: "Noto Sans KR, sans-serif", gap: 16 }}>
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", background: "#e8f4fd", color: "#e06c75", fontSize: 15, fontFamily: "Noto Sans KR, sans-serif", gap: 16 }}>
       <span>⚠️ Firebase 연결에 실패했습니다.</span>
-      <span style={{ fontSize: 12, color: "#5a6480" }}>firebaseConfig 설정값을 확인하거나 네트워크 상태를 확인해주세요.</span>
-      <button onClick={() => window.location.reload()} style={{ marginTop: 8, background: "#4a90d9", color: "#fff", border: "none", borderRadius: 8, padding: "10px 24px", fontSize: 13, cursor: "pointer" }}>
+      <span style={{ fontSize: 12, color: "#607d8b" }}>firebaseConfig 설정값을 확인하거나 네트워크 상태를 확인해주세요.</span>
+      <button onClick={() => window.location.reload()} style={{ marginTop: 8, background: "#1976d2", color: "#fff", border: "none", borderRadius: 8, padding: "10px 24px", fontSize: 13, cursor: "pointer" }}>
         새로고침
       </button>
     </div>
@@ -1000,8 +1000,9 @@ export default function App() {
         .th-day { background: #1976d2; color: #fff; font-weight: 700; font-size: 14px; }
         .th-floor { background: #bbdefb; color: #1565c0; font-weight: 600; font-size: 11px; }
         .td-time { background: #e3f2fd; color: #78909c; font-size: 11px; font-weight: 500; width: 96px; line-height: 1.5; }
-        .td-cell { cursor: pointer; transition: filter .15s; font-size: 13px; min-width: 72px; position: relative; }
-        .td-cell:hover { filter: brightness(.93); }
+        .td-cell { cursor: pointer; font-size: 13px; min-width: 72px; position: relative; }
+        .td-cell::after { content: ''; position: absolute; inset: 0; background: transparent; pointer-events: none; transition: background .15s; }
+        .td-cell:hover::after { background: rgba(0,0,0,0.07); }
         .active-cell { outline: 2px solid #1976d2; outline-offset: -2px; }
         .empty-cell { color: #cfd8dc; }
         .tr-first td, .tr-first th { background: #e1f0fb !important; }
