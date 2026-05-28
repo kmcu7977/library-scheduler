@@ -6,17 +6,14 @@ import { getDatabase, ref, set, get } from "firebase/database";
 // eslint-disable-next-line no-undef
 const XLSX = window.XLSX;
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ⚠️  Firebase 설정 — Firebase 콘솔에서 복사해서 교체하세요
-// ─────────────────────────────────────────────────────────────────────────────
 const firebaseConfig = {
-  apiKey:            "YOUR_API_KEY",
-  authDomain:        "YOUR_AUTH_DOMAIN",
-  databaseURL:       "https://library-checklist-4ec86-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId:         "YOUR_PROJECT_ID",
-  storageBucket:     "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId:             "YOUR_APP_ID",
+  apiKey:            "AIzaSyBfMCrCsoMUrJQW9zGpRZvVbcghRUHvMfw",
+  authDomain:        "library-scheduler-aec7b.firebaseapp.com",
+  databaseURL:       "https://library-scheduler-aec7b-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:         "library-scheduler-aec7b",
+  storageBucket:     "library-scheduler-aec7b.firebasestorage.app",
+  messagingSenderId: "393819398330",
+  appId:             "1:393819398330:web:a80d7446cb63f71e652283",
 };
 const app = initializeApp(firebaseConfig);
 const db  = getDatabase(app);
