@@ -146,6 +146,16 @@ function autoSchedule(members, timeSlots, cfg) {
     if (needsLunchBreak(name, day, si)) return false;
     return true;
   };
+  // 점심 보호 완화용: 수업충돌·한도만 체크 (needsLunchBreak 무시)
+  const canAssignRelaxed = (name, day, si, slotH) => {
+    const m = members.find(x => x.name === name);
+    if (!m) return false;
+    if (isClassTime(m, day, si, timeSlots)) return false;
+    const halfExtra = (halfSlotIdx === 0 && si === 1) ? timeSlots[0].hours : 0;
+    if (weeklyHours[name] + slotH + halfExtra > cfg.maxWeeklyHours) return false;
+    if (dailyHours[name][day] + slotH + halfExtra > cfg.maxDailyHours) return false;
+    return true;
+  };
 
   DAYS.forEach(day => {
     timeSlots.forEach((slot, si) => {
@@ -156,7 +166,10 @@ function autoSchedule(members, timeSlots, cfg) {
       FLOOR_KEYS.forEach(key => {
         // taken을 매 key마다 재계산해서 앞선 key 배치 결과를 반영
         const taken = alreadyInSlot();
-        const available = members.filter(m => !taken.includes(m.name) && canAssign(m.name, day, si, slotH));
+        let available = members.filter(m => !taken.includes(m.name) && canAssign(m.name, day, si, slotH));
+        // 점심 보호로 모두 배치 불가 시 완화: 각 층은 항상 1명 배치
+        if (available.length === 0)
+          available = members.filter(m => !taken.includes(m.name) && canAssignRelaxed(m.name, day, si, slotH));
         if (available.length === 0) return;
 
         // 0순위: 선호층 + 직전 연속
@@ -700,7 +713,11 @@ function ScheduleEditor({ members, schedule, setSchedule, onExport, onBack, time
               {DAYS.map(day => <th key={day} colSpan={4} className="th-day">{day}</th>)}
             </tr>
             <tr>
-              {DAYS.map(day => ["2층","3층","3층","4층"].map((f, fi) => <th key={`${day}-${fi}`} className="th-floor">{f}</th>))}
+              {DAYS.flatMap(day => [
+                <th key={`${day}-f2`} className="th-floor">2층</th>,
+                <th key={`${day}-f3`} className="th-floor" colSpan={2}>3층</th>,
+                <th key={`${day}-f4`} className="th-floor">4층</th>,
+              ])}
             </tr>
           </thead>
           <tbody>
@@ -915,7 +932,7 @@ export default function App() {
         .step-dot label { font-size: 13px; font-weight: 500; color: #ffffffcc; cursor: default; }
         .app-main { padding: 32px 20px; display: flex; justify-content: center; }
         .step-card { background: #ffffff; border: 1px solid #bae0f7; border-radius: 18px; padding: 32px; width: 100%; max-width: 640px; box-shadow: 0 4px 24px #0ea5e920; }
-        .step-card.wide { max-width: 1200px; }
+        .step-card.wide { max-width: calc(100vw - 40px); }
         .step-title { font-size: 18px; font-weight: 700; color: #1565c0; border-left: 4px solid #29b6f6; padding-left: 12px; margin-bottom: 20px; }
         .step-desc { font-size: 13px; color: #607d8b; margin-bottom: 14px; margin-top: -10px; }
         .preset-row { display: flex; align-items: center; gap: 10px; margin-bottom: 22px; flex-wrap: wrap; }
@@ -994,13 +1011,13 @@ export default function App() {
         .weekly-h { font-size: 12px; color: #546e7a; min-width: 62px; text-align: right; }
         .weekly-h.over { color: #ef5350; font-weight: 700; }
         .table-wrap { overflow-x: auto; border-radius: 12px; border: 1px solid #bae0f7; }
-        .sched-table { border-collapse: collapse; min-width: 1100px; width: 100%; font-size: 13px; }
+        .sched-table { border-collapse: collapse; width: 100%; font-size: 13px; table-layout: fixed; }
         .sched-table th, .sched-table td { border: 1px solid #bae0f7; text-align: center; padding: 6px 4px; white-space: pre-line; }
         .th-time { background: #e3f2fd; color: #78909c; font-weight: 600; width: 96px; font-size: 12px; }
         .th-day { background: #1976d2; color: #fff; font-weight: 700; font-size: 14px; }
         .th-floor { background: #bbdefb; color: #1565c0; font-weight: 600; font-size: 11px; }
         .td-time { background: #e3f2fd; color: #78909c; font-size: 11px; font-weight: 500; width: 96px; line-height: 1.5; }
-        .td-cell { cursor: pointer; font-size: 13px; min-width: 72px; position: relative; }
+        .td-cell { cursor: pointer; font-size: 13px; position: relative; }
         .td-cell::after { content: ''; position: absolute; inset: 0; background: transparent; pointer-events: none; transition: background .15s; }
         .td-cell:hover::after { background: rgba(0,0,0,0.07); }
         .active-cell { outline: 2px solid #1976d2; outline-offset: -2px; }
