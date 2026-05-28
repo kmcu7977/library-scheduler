@@ -722,7 +722,7 @@ function ScheduleEditor({ members, schedule, setSchedule, onExport, onBack, time
           </thead>
           <tbody>
             {timeSlots.map((slot, si) => (
-              <tr key={si} className={si === 0 ? "tr-first" : ""}>
+              <tr key={si}>
                 <td className="td-time">{slot.label}</td>
                 {DAYS.map(day => FLOOR_KEYS.map(fk => (
                   <ScheduleCell key={`${day}-${fk}`}
@@ -1022,7 +1022,7 @@ export default function App() {
         .td-cell:hover::after { background: rgba(0,0,0,0.07); }
         .active-cell { outline: 2px solid #1976d2; outline-offset: -2px; }
         .empty-cell { color: #cfd8dc; }
-        .tr-first td, .tr-first th { background: #e1f0fb !important; }
+
         .cell-popup-overlay { position: fixed; inset: 0; background: #00000060; display: flex; align-items: center; justify-content: center; z-index: 200; }
         .cell-popup { background: #fff; border: 1px solid #90caf9; border-radius: 16px; padding: 24px; min-width: 260px; max-width: 380px; box-shadow: 0 8px 32px #1976d230; }
         .popup-title { font-size: 14px; color: #546e7a; margin-bottom: 16px; font-weight: 500; line-height: 1.6; }
