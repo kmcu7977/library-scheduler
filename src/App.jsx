@@ -492,7 +492,7 @@ function MemberSetup({ members, setMembers, onNext, onBack }) {
           { f: "name",      label: "이름*",   ph: "이름",          cls: "mf-name", required: true },
           { f: "dept",      label: "학과",    ph: "학과명",         cls: "mf-wide" },
           { f: "studentId", label: "학번",    ph: "학번",           cls: "mf-mid" },
-          { f: "phone",     label: "연락처",   ph: "010-0000-0000", cls: "mf-mid" },
+          { f: "phone",     label: "연락처",   ph: "010-0000-0000", cls: "mf-phone" },
           { f: "note",      label: "비고",    ph: "특이사항",        cls: "mf-wide" },
         ].map(({ f, label, ph, cls }) => (
           <div key={f} className="mf-row">
@@ -606,9 +606,9 @@ function ClassSetup({ members, setMembers, onNext, onBack }) {
   const [selected, setSelected] = useState(members[0]?.name || "");
   const member = members.find(m => m.name === selected);
 
-  const addClass    = () => setMembers(prev => prev.map(m => m.name !== selected ? m : { ...m, classes: [...m.classes, { day: "월", startHour: 9, startMin: 0, endHour: 10, endMin: 0 }] }));
-  const updateClass = (idx, field, value) => setMembers(prev => prev.map(m => m.name !== selected ? m : { ...m, classes: m.classes.map((c, i) => i !== idx ? c : { ...c, [field]: field === "day" ? value : (parseInt(value) || 0) }) }));
-  const removeClass = idx => setMembers(prev => prev.map(m => m.name !== selected ? m : { ...m, classes: m.classes.filter((_, i) => i !== idx) }));
+  const addClass    = () => setMembers(prev => prev.map(m => m.name !== selected ? m : { ...m, classes: [...(m.classes || []), { day: "월", startHour: 9, startMin: 0, endHour: 10, endMin: 0 }] }));
+  const updateClass = (idx, field, value) => setMembers(prev => prev.map(m => m.name !== selected ? m : { ...m, classes: (m.classes || []).map((c, i) => i !== idx ? c : { ...c, [field]: field === "day" ? value : (parseInt(value) || 0) }) }));
+  const removeClass = idx => setMembers(prev => prev.map(m => m.name !== selected ? m : { ...m, classes: (m.classes || []).filter((_, i) => i !== idx) }));
 
   return (
     <div className="step-card">
@@ -623,8 +623,8 @@ function ClassSetup({ members, setMembers, onNext, onBack }) {
       </div>
       {member && (
         <div className="class-list">
-          {member.classes.length === 0 && <p className="no-class">등록된 수업이 없습니다.</p>}
-          {member.classes.map((cls, idx) => (
+          {(member.classes || []).length === 0 && <p className="no-class">등록된 수업이 없습니다.</p>}
+          {(member.classes || []).map((cls, idx) => (
             <div key={idx} className="class-row">
               <select className="sel" value={cls.day} onChange={e => updateClass(idx, "day", e.target.value)}>
                 {DAYS_KR.map(d => <option key={d} value={d}>{d}</option>)}
@@ -954,7 +954,7 @@ export default function App() {
         .member-form-grid { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; margin-bottom: 20px; background: #e3f2fd; border-radius: 12px; padding: 16px 18px; }
         .mf-row { display: flex; flex-direction: column; gap: 5px; }
         .mf-label { font-size: 12px; color: #546e7a; font-weight: 600; }
-        .mf-name { width: 100px !important; } .mf-mid { width: 130px !important; } .mf-wide { width: 200px !important; }
+        .mf-name { width: 100px !important; } .mf-mid { width: 130px !important; } .mf-phone { width: 180px !important; } .mf-wide { width: 200px !important; }
         .mf-add { align-self: flex-end; padding: 10px 22px !important; }
         .input-row { display: flex; gap: 10px; margin-bottom: 16px; }
         .text-input { flex: 1; background: #fff; border: 1px solid #90caf9; border-radius: 10px; padding: 10px 14px; color: #1a2a3a; font-size: 15px; font-family: inherit; outline: none; transition: border .2s; }
