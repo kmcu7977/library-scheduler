@@ -165,7 +165,8 @@ function autoSchedule(members, timeSlots, cfg) {
       const slotH = slot.hours;
       const alreadyInSlot = () => Object.values(schedule[day][si]).filter(Boolean);
 
-      FLOOR_KEYS.forEach(key => {
+      // f3b를 마지막에 배치해야 인원 부족 시 f4가 먼저 채워짐
+      ["f2", "f3a", "f4", "f3b"].forEach(key => {
         // taken을 매 key마다 재계산해서 앞선 key 배치 결과를 반영
         const taken = alreadyInSlot();
         let available = members.filter(m => !taken.includes(m.name) && canAssign(m.name, day, si, slotH));
