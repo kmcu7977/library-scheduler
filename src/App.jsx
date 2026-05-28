@@ -99,7 +99,8 @@ const isMorningSlot   = slot => slot.startH < 12;
 // 2순위: 선호층 + 주간시간 적은 순
 // 3순위: 직전슬롯 연속 (선호층 없는 인원)
 // 4순위: 오늘 근무 중 + 주간시간 적은 순
-// 5순위: 주간시간 적은 순 (전체)
+// 5순위: 해당 요일 등교(수업 있음) + 주간시간 적은 순
+// 6순위: 주간시간 적은 순 (전체)
 function autoSchedule(members, timeSlots, cfg) {
   const schedule = {};
   DAYS.forEach(day => { schedule[day] = timeSlots.map(() => ({ f2: null, f3a: null, f3b: null, f4: null })); });
@@ -139,10 +140,8 @@ function autoSchedule(members, timeSlots, cfg) {
     const m = members.find(x => x.name === name);
     if (!m) return false;
     if (isClassTime(m, day, si, timeSlots)) return false;
-    // si=1 배치 시 후처리로 추가될 halfSlot 0.5h를 미리 반영해서 한도 체크
-    const halfExtra = (halfSlotIdx === 0 && si === 1) ? timeSlots[0].hours : 0;
-    if (weeklyHours[name] + slotH + halfExtra > cfg.maxWeeklyHours) return false;
-    if (dailyHours[name][day] + slotH + halfExtra > cfg.maxDailyHours) return false;
+    if (weeklyHours[name] + slotH > cfg.maxWeeklyHours) return false;
+    if (dailyHours[name][day] + slotH > cfg.maxDailyHours) return false;
     if (needsLunchBreak(name, day, si)) return false;
     return true;
   };
@@ -151,10 +150,13 @@ function autoSchedule(members, timeSlots, cfg) {
     const m = members.find(x => x.name === name);
     if (!m) return false;
     if (isClassTime(m, day, si, timeSlots)) return false;
-    const halfExtra = (halfSlotIdx === 0 && si === 1) ? timeSlots[0].hours : 0;
-    if (weeklyHours[name] + slotH + halfExtra > cfg.maxWeeklyHours) return false;
-    if (dailyHours[name][day] + slotH + halfExtra > cfg.maxDailyHours) return false;
+    if (weeklyHours[name] + slotH > cfg.maxWeeklyHours) return false;
+    if (dailyHours[name][day] + slotH > cfg.maxDailyHours) return false;
     return true;
+  };
+  const hasClassOnDay = (name, day) => {
+    const m = members.find(x => x.name === name);
+    return m ? (m.classes || []).some(cls => cls.day === day) : false;
   };
 
   DAYS.forEach(day => {
@@ -206,22 +208,28 @@ function autoSchedule(members, timeSlots, cfg) {
         const todayWorking = available.filter(m => workingToday.has(m.name)).sort((a, b) => weeklyHours[a.name] - weeklyHours[b.name]);
         if (todayWorking.length > 0) { schedule[day][si][key] = todayWorking[0].name; weeklyHours[todayWorking[0].name] += slotH; dailyHours[todayWorking[0].name][day] += slotH; return; }
 
-        // 5순위: 주간시간 적은 순
+        // 5순위: 해당 요일 등교 중(수업 있음) + 주간시간
+        const classToday = available.filter(m => hasClassOnDay(m.name, day)).sort((a, b) => weeklyHours[a.name] - weeklyHours[b.name]);
+        if (classToday.length > 0) { schedule[day][si][key] = classToday[0].name; weeklyHours[classToday[0].name] += slotH; dailyHours[classToday[0].name][day] += slotH; return; }
+
+        // 6순위: 주간시간 적은 순
         available.sort((a, b) => weeklyHours[a.name] - weeklyHours[b.name]);
         schedule[day][si][key] = available[0].name; weeklyHours[available[0].name] += slotH; dailyHours[available[0].name][day] += slotH;
       });
+
+      // 0.5시간 첫 슬롯 즉시 처리: si=1 배치 직후 si=0 복사 및 시간 반영
+      // (후처리가 아닌 즉시 반영해야 이후 슬롯 한도 체크에 정확히 포함됨)
+      if (si === 1 && halfSlotIdx === 0 && timeSlots.length > 1) {
+        FLOOR_KEYS.forEach(fk => {
+          const nextName = schedule[day][1][fk];
+          schedule[day][0][fk] = nextName;
+          if (nextName) {
+            weeklyHours[nextName] += timeSlots[0].hours;
+            dailyHours[nextName][day] += timeSlots[0].hours;
+          }
+        });
+      }
     });
-    // 0.5시간 첫 슬롯 후처리: 다음 슬롯(si=1)과 동일 인원으로 무조건 복사
-    if (halfSlotIdx === 0 && timeSlots.length > 1) {
-      FLOOR_KEYS.forEach(fk => {
-        const nextName = schedule[day][1][fk];
-        schedule[day][0][fk] = nextName;
-        if (nextName) {
-          weeklyHours[nextName] += timeSlots[0].hours;
-          dailyHours[nextName][day] += timeSlots[0].hours;
-        }
-      });
-    }
   });
   return schedule;
 }
@@ -340,12 +348,13 @@ function SubTooltip({ members, day, si, fk, schedule, mousePos, visible, timeSlo
 }
 
 // ─── 시간표 셀 ───────────────────────────────────────────────────────────────
-function ScheduleCell({ name, day, si, fk, members, schedule, onClick, active, timeSlots }) {
+function ScheduleCell({ name, day, si, fk, members, schedule, onClick, active, timeSlots, colSpan }) {
   const [hovered, setHovered] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const color = members.find(m => m.name === name)?.color || "#aaa";
   return (
     <td
+      colSpan={colSpan || 1}
       className={`td-cell ${active ? "active-cell" : ""} ${!name ? "empty-cell" : ""}`}
       style={name ? { background: color + "28", color, fontWeight: 700 } : {}}
       onClick={() => { setHovered(false); onClick(); }}
@@ -724,13 +733,16 @@ function ScheduleEditor({ members, schedule, setSchedule, onExport, onBack, time
             {timeSlots.map((slot, si) => (
               <tr key={si}>
                 <td className="td-time">{slot.label}</td>
-                {DAYS.map(day => FLOOR_KEYS.map(fk => (
-                  <ScheduleCell key={`${day}-${fk}`}
-                    name={schedule[day]?.[si]?.[fk] || ""} day={day} si={si} fk={fk}
-                    members={members} schedule={schedule} timeSlots={timeSlots}
-                    active={editCell?.day === day && editCell?.si === si && editCell?.fk === fk}
-                    onClick={() => setEditCell({ day, si, fk })} />
-                )))}
+                {DAYS.flatMap(day => {
+                  const f3b = schedule[day]?.[si]?.f3b;
+                  const merge3 = !f3b;
+                  return [
+                    <ScheduleCell key={`${day}-f2`} fk="f2" name={schedule[day]?.[si]?.f2 || ""} day={day} si={si} members={members} schedule={schedule} timeSlots={timeSlots} active={editCell?.day === day && editCell?.si === si && editCell?.fk === "f2"} onClick={() => setEditCell({ day, si, fk: "f2" })} />,
+                    <ScheduleCell key={`${day}-f3a`} fk="f3a" name={schedule[day]?.[si]?.f3a || ""} colSpan={merge3 ? 2 : 1} day={day} si={si} members={members} schedule={schedule} timeSlots={timeSlots} active={editCell?.day === day && editCell?.si === si && editCell?.fk === "f3a"} onClick={() => setEditCell({ day, si, fk: "f3a" })} />,
+                    ...(merge3 ? [] : [<ScheduleCell key={`${day}-f3b`} fk="f3b" name={schedule[day]?.[si]?.f3b || ""} day={day} si={si} members={members} schedule={schedule} timeSlots={timeSlots} active={editCell?.day === day && editCell?.si === si && editCell?.fk === "f3b"} onClick={() => setEditCell({ day, si, fk: "f3b" })} />]),
+                    <ScheduleCell key={`${day}-f4`} fk="f4" name={schedule[day]?.[si]?.f4 || ""} day={day} si={si} members={members} schedule={schedule} timeSlots={timeSlots} active={editCell?.day === day && editCell?.si === si && editCell?.fk === "f4"} onClick={() => setEditCell({ day, si, fk: "f4" })} />,
+                  ];
+                })}
               </tr>
             ))}
           </tbody>
