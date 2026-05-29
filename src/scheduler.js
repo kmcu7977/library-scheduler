@@ -139,28 +139,36 @@ export function autoSchedule(members, timeSlots, cfg) {
     // 5) 직전 슬롯과 동일인 연속
     if (prevAvail) { assign(prev); return; }
 
-    // 6) 오늘 수업 있는 사람 우선(가용 시간이 한정적이므로 먼저 소진)
-    const classToday = avail.filter(m => hasClassOnDay(m.name, day));
-    if (classToday.length > 0) { assign(byLoad(classToday, day, si)[0].name); return; }
+    // 5-2) 다음 슬롯에 이미 배치된 사람(저녁 먼저 배치 등)으로 이어붙임 → 이음새 단일셀 방지
+    const next = si < timeSlots.length - 1 ? schedule[day][si + 1][key] : null;
+    const nextAvail = next ? avail.find(m => m.name === next) : null;
+    if (nextAvail) { assign(next); return; }
 
-    // 7) 최소근무 우선
-    assign(byLoad(avail, day, si)[0].name);
+    // 6) 오늘 수업 있는 사람 우선(가용 시간이 한정적이므로 먼저 소진, 긴 블록 우선)
+    const classToday = avail.filter(m => hasClassOnDay(m.name, day));
+    if (classToday.length > 0) { assign(byBlock(classToday, day, si)[0].name); return; }
+
+    // 7) 긴 연속블록 우선(균형은 byBlock 2차 기준 주간시간으로 반영)
+    assign(byBlock(avail, day, si)[0].name);
   };
 
-  // 슬롯 우선 × 요일 균등 단일 패스(층별). 슬롯을 오전→저녁 순서로 한 번에 처리해
-  // 한 근로자의 근무가 끊기지 않고 연속 블록으로 이어지도록 한다. (단계 분리 없음)
-  const assignFloor = (key) => {
+  // 슬롯 우선 × 요일 균등 패스(층별). slotFilter로 저녁/주간 단계를 분리한다.
+  const assignFloor = (key, slotFilter) => {
     timeSlots.forEach((slot, si) => {
       if (si === halfSlotIdx) return;       // 0.5h 첫 슬롯은 si=1 배치 시 미러로 채움
+      if (!slotFilter(slot)) return;
       DAYS.forEach(day => fillCell(key, day, si, slot));
     });
   };
 
-  // 2층 → 4층 → 3층(f3a) → 3층 둘째칸(f3b, overflow 잔여)
-  assignFloor("f2");
-  assignFloor("f4");
-  assignFloor("f3a");
-  assignFloor("f3b");
+  const isEvening = s => s.startH >= 17;
+  const isDaytime = s => s.startH < 17;
+  const FLOORS = ["f2", "f4", "f3a", "f3b"];   // f3b는 3층 둘째칸(overflow 잔여)
+
+  // 저녁(17시~마감)은 교대 없이 연속이어야 하고 주 후반에 주간시간이 부족해지므로
+  // 모든 층·요일의 저녁을 먼저 배치해 주간시간을 선점한다. 그 다음 주간을 채운다.
+  FLOORS.forEach(k => assignFloor(k, isEvening));
+  FLOORS.forEach(k => assignFloor(k, isDaytime));
 
   return schedule;
 }
