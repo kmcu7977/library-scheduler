@@ -148,14 +148,45 @@ function autoSchedule(members, timeSlots, cfg) {
       return d !== 0 ? d : weeklyHours[a.name] - weeklyHours[b.name];
     });
 
+  // 2순위 선호 인원 → 수업 없는 가장 이른 요일 17시~에 강제 배치
+  const FLOOR_TO_MAIN_KEY = { "2층": "f2", "3층": "f3a", "4층": "f4" };
+  const preAssignEvening = () => {
+    members.filter(m => m.preferFloor2).forEach(member => {
+      const prefKey = FLOOR_TO_MAIN_KEY[member.preferFloor2];
+      if (!prefKey) return;
+      for (const day of DAYS) {
+        const hasEveningClass = timeSlots.some((s, i) => s.startH >= 17 && isClassTime(member, day, i, timeSlots));
+        if (hasEveningClass) continue;
+        let anyAssigned = false;
+        timeSlots.forEach((slot, si) => {
+          if (slot.startH < 17 || si === halfSlotIdx) return;
+          if (schedule[day][si][prefKey] !== null) return;
+          const taken = Object.values(schedule[day][si]).filter(Boolean);
+          if (taken.includes(member.name)) return;
+          if (!canAssign(member.name, day, si, slot.hours)) return;
+          schedule[day][si][prefKey] = member.name;
+          weeklyHours[member.name] += slot.hours;
+          dailyHours[member.name][day] += slot.hours;
+          anyAssigned = true;
+        });
+        if (anyAssigned) break;
+      }
+    });
+  };
+
   // 한 층(key)을 요일 우선 × 슬롯 순으로 배치
   const assignFloor = (key) => {
     DAYS.forEach(day => {
       timeSlots.forEach((slot, si) => {
         if (si === halfSlotIdx) return;
+        if (schedule[day][si][key] !== null) return; // 사전 배치 슬롯 건너뜀
         const slotH = slot.hours;
         const taken = Object.values(schedule[day][si]).filter(Boolean);
-        const available = members.filter(m => !taken.includes(m.name) && canAssign(m.name, day, si, slotH));
+        const available = members.filter(m =>
+          !taken.includes(m.name) &&
+          canAssign(m.name, day, si, slotH) &&
+          !(key === 'f3a' && m.preferFloor2) // 2순위 인원 f3a 배치 금지
+        );
         if (available.length === 0) return;
 
         const assign = name => {
@@ -210,6 +241,7 @@ function autoSchedule(members, timeSlots, cfg) {
     });
   };
 
+  preAssignEvening();
   assignFloor("f2");
   assignFloor("f4");
   assignFloor("f3a");
