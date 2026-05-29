@@ -91,12 +91,13 @@ const isAfternoonSlot = slot => slot.startH >= 14;
 const isMorningSlot   = slot => slot.startH < 12;
 
 // ─── 자동 배치 ───────────────────────────────────────────────────────────────
-// 층 우선 배치: f2 전체 → f4 전체 → f3a 전체 → f3b(잔여 인원)
-// 각 층 내: 슬롯 우선 × 요일 순 (배분 균등화)
-// 0순위: 1순위선호+직전연속  1순위: 1순위선호+주간시간
-// 2순위: 2순위선호+직전연속  3순위: 2순위선호+주간시간
-// 4순위: 직전연속           5순위: 오늘근무+주간시간
-// 6순위: 수업있는요일+주간시간  7순위: 주간시간
+// 층 우선 배치: f2 전체 → f4 전체 → f3a 전체 → f3b 전체
+// 각 층 내: 요일 우선 × 슬롯 순 (day-first)
+// 0순위: 1순위선호+직전연속  1순위: 1순위선호+연속커버수
+// 2순위: 2순위선호+직전연속  3순위: 2순위선호+연속커버수
+// 4순위: 직전연속           5순위: 수업있는요일+연속커버수
+// 6순위: 연속커버수
+// 점심 후처리: 전체 층 배치 완료 후 사람 단위로 검사
 function autoSchedule(members, timeSlots, cfg) {
   const schedule = {};
   DAYS.forEach(day => { schedule[day] = timeSlots.map(() => ({ f2: null, f3a: null, f3b: null, f4: null })); });
@@ -108,62 +109,50 @@ function autoSchedule(members, timeSlots, cfg) {
   });
   const halfSlotIdx = timeSlots[0]?.hours === 0.5 ? 0 : -1;
 
-  const hasMorningWork = (name, day) =>
-    timeSlots.some((slot, pi) => isMorningSlot(slot) && Object.values(schedule[day][pi]).includes(name));
-  const hasAfternoonPotential = (name, day, slotH) => {
-    const m = members.find(x => x.name === name);
-    return m ? timeSlots.some((slot, pi) =>
-      isAfternoonSlot(slot) && !isClassTime(m, day, pi, timeSlots) && weeklyHours[name] + slotH <= cfg.maxWeeklyHours
-    ) : false;
-  };
-  const lunchBreakUsed = (name, day, currentSi) => {
-    let n = 0;
-    timeSlots.forEach((slot, pi) => {
-      if (pi < currentSi && isLunchSlot(slot) && !Object.values(schedule[day][pi]).filter(Boolean).includes(name)) n++;
-    });
-    return n;
-  };
-  const needsLunchBreak = (name, day, si) => {
-    const slot = timeSlots[si];
-    if (!isLunchSlot(slot)) return false;
-    if (!hasMorningWork(name, day)) return false;
-    if (!hasAfternoonPotential(name, day, slot.hours)) return false;
-    if (lunchBreakUsed(name, day, si) >= 1) return false;
-    return timeSlots.slice(si).filter(isLunchSlot).length <= 1;
-  };
   const canAssign = (name, day, si, slotH) => {
     const m = members.find(x => x.name === name);
     if (!m) return false;
     if (isClassTime(m, day, si, timeSlots)) return false;
     if (weeklyHours[name] + slotH > cfg.maxWeeklyHours) return false;
     if (dailyHours[name][day] + slotH > cfg.maxDailyHours) return false;
-    if (needsLunchBreak(name, day, si)) return false;
     return true;
   };
-  const canAssignRelaxed = (name, day, si, slotH) => {
-    const m = members.find(x => x.name === name);
-    if (!m) return false;
-    if (isClassTime(m, day, si, timeSlots)) return false;
-    if (weeklyHours[name] + slotH > cfg.maxWeeklyHours) return false;
-    if (dailyHours[name][day] + slotH > cfg.maxDailyHours) return false;
-    return true;
-  };
+
   const hasClassOnDay = (name, day) => {
     const m = members.find(x => x.name === name);
     return m ? (m.classes || []).some(cls => cls.day === day) : false;
   };
 
-  // 한 층(key)을 전체 슬롯 × 요일에 걸쳐 배치
-  const assignFloor = (key) => {
-    timeSlots.forEach((slot, si) => {
-      if (si === halfSlotIdx) return;
-      const slotH = slot.hours;
+  // si부터 연속으로 커버 가능한 슬롯 수 (현재 weeklyHours/dailyHours 반영)
+  const countConsecutive = (name, day, startSi) => {
+    let count = 0, wh = weeklyHours[name], dh = dailyHours[name][day];
+    const m = members.find(x => x.name === name);
+    if (!m) return 0;
+    for (let si = startSi; si < timeSlots.length; si++) {
+      if (si === halfSlotIdx) continue;
+      const slotH = timeSlots[si].hours;
+      if (isClassTime(m, day, si, timeSlots)) break;
+      if (wh + slotH > cfg.maxWeeklyHours || dh + slotH > cfg.maxDailyHours) break;
+      count++; wh += slotH; dh += slotH;
+    }
+    return count;
+  };
 
-      DAYS.forEach(day => {
+  // 연속커버수 내림차순, 동점이면 주간시간 오름차순
+  const sortByConsec = (list, day, si) =>
+    [...list].sort((a, b) => {
+      const d = countConsecutive(b.name, day, si) - countConsecutive(a.name, day, si);
+      return d !== 0 ? d : weeklyHours[a.name] - weeklyHours[b.name];
+    });
+
+  // 한 층(key)을 요일 우선 × 슬롯 순으로 배치
+  const assignFloor = (key) => {
+    DAYS.forEach(day => {
+      timeSlots.forEach((slot, si) => {
+        if (si === halfSlotIdx) return;
+        const slotH = slot.hours;
         const taken = Object.values(schedule[day][si]).filter(Boolean);
-        let available = members.filter(m => !taken.includes(m.name) && canAssign(m.name, day, si, slotH));
-        if (available.length === 0)
-          available = members.filter(m => !taken.includes(m.name) && canAssignRelaxed(m.name, day, si, slotH));
+        const available = members.filter(m => !taken.includes(m.name) && canAssign(m.name, day, si, slotH));
         if (available.length === 0) return;
 
         const assign = name => {
@@ -172,103 +161,129 @@ function autoSchedule(members, timeSlots, cfg) {
           dailyHours[name][day] += slotH;
         };
 
-        // 0순위: 1순위선호 + 직전 연속
-        if (si > 0) {
-          const prev = schedule[day][si - 1][key];
-          if (prev && !taken.includes(prev) && canAssign(prev, day, si, slotH) && prefersFloor1(members.find(m => m.name === prev), key)) {
-            assign(prev); return;
-          }
-        }
+        const prev = si > 0 ? schedule[day][si - 1][key] : null;
+        const prevAvail = prev ? available.find(m => m.name === prev) : null;
+
+        // 0순위: 1순위선호 + 직전연속
+        if (prevAvail && prefersFloor1(members.find(m => m.name === prev), key)) { assign(prev); return; }
+
         const pref1 = available.filter(m => prefersFloor1(m, key));
         if (pref1.length > 0) {
-          if (si > 0) {
-            const prev = schedule[day][si - 1][key];
-            const cont = pref1.find(m => m.name === prev);
-            if (cont) { assign(cont.name); return; }
-          }
-          // 1순위: 1순위선호 + 주간시간
-          pref1.sort((a, b) => weeklyHours[a.name] - weeklyHours[b.name]);
-          assign(pref1[0].name); return;
+          const cont = pref1.find(m => m.name === prev);
+          if (cont) { assign(cont.name); return; }
+          // 1순위: 1순위선호 + 연속커버수
+          assign(sortByConsec(pref1, day, si)[0].name); return;
         }
 
-        // 2순위: 2순위선호 + 직전 연속
-        if (si > 0) {
-          const prev = schedule[day][si - 1][key];
-          if (prev && !taken.includes(prev) && canAssign(prev, day, si, slotH) && prefersFloor2(members.find(m => m.name === prev), key)) {
-            assign(prev); return;
-          }
-        }
+        // 2순위: 2순위선호 + 직전연속
+        if (prevAvail && prefersFloor2(members.find(m => m.name === prev), key)) { assign(prev); return; }
+
         const pref2 = available.filter(m => prefersFloor2(m, key));
         if (pref2.length > 0) {
-          if (si > 0) {
-            const prev = schedule[day][si - 1][key];
-            const cont = pref2.find(m => m.name === prev);
-            if (cont) { assign(cont.name); return; }
-          }
-          // 3순위: 2순위선호 + 주간시간
-          pref2.sort((a, b) => weeklyHours[a.name] - weeklyHours[b.name]);
-          assign(pref2[0].name); return;
+          const cont = pref2.find(m => m.name === prev);
+          if (cont) { assign(cont.name); return; }
+          // 3순위: 2순위선호 + 연속커버수
+          assign(sortByConsec(pref2, day, si)[0].name); return;
         }
 
-        // 4순위: 직전 연속
-        if (si > 0) {
-          const prev = schedule[day][si - 1][key];
-          if (prev && !taken.includes(prev) && canAssign(prev, day, si, slotH)) { assign(prev); return; }
-        }
+        // 4순위: 직전연속
+        if (prevAvail) { assign(prev); return; }
 
-        const workingToday = new Set(timeSlots.slice(0, si).flatMap((_, pi) => Object.values(schedule[day][pi])).filter(Boolean));
-        // 5순위: 오늘 근무 중 + 주간시간
-        const todayWorking = available.filter(m => workingToday.has(m.name)).sort((a, b) => weeklyHours[a.name] - weeklyHours[b.name]);
-        if (todayWorking.length > 0) { assign(todayWorking[0].name); return; }
+        // 5순위: 수업있는요일 + 연속커버수
+        const classToday = available.filter(m => hasClassOnDay(m.name, day));
+        if (classToday.length > 0) { assign(sortByConsec(classToday, day, si)[0].name); return; }
 
-        // 6순위: 수업 있는 요일 + 주간시간
-        const classToday = available.filter(m => hasClassOnDay(m.name, day)).sort((a, b) => weeklyHours[a.name] - weeklyHours[b.name]);
-        if (classToday.length > 0) { assign(classToday[0].name); return; }
-
-        // 7순위: 주간시간 적은 순
-        available.sort((a, b) => weeklyHours[a.name] - weeklyHours[b.name]);
-        assign(available[0].name);
+        // 6순위: 연속커버수
+        assign(sortByConsec(available, day, si)[0].name);
       });
 
-      // halfSlot: si=1 직후 모든 요일 si=0 복사 및 시간 반영
-      if (si === 1 && halfSlotIdx === 0 && timeSlots.length > 1) {
-        DAYS.forEach(day => {
-          const nextName = schedule[day][1][key];
-          schedule[day][0][key] = nextName;
-          if (nextName) { weeklyHours[nextName] += timeSlots[0].hours; dailyHours[nextName][day] += timeSlots[0].hours; }
-        });
+      // halfSlot: si=1 처리 후 si=0 복사
+      if (halfSlotIdx === 0 && timeSlots.length > 1) {
+        const nextName = schedule[day][1][key];
+        schedule[day][0][key] = nextName;
+        if (nextName) { weeklyHours[nextName] += timeSlots[0].hours; dailyHours[nextName][day] += timeSlots[0].hours; }
       }
     });
   };
 
-  // 층 우선 배치: f2 전체 → f4 전체 → f3a 전체
   assignFloor("f2");
   assignFloor("f4");
   assignFloor("f3a");
+  assignFloor("f3b");
 
-  // f3b: 3패스 완료 후 주간시간 덜 찬 잔여 인원으로 채움
-  timeSlots.forEach((slot, si) => {
-    if (si === halfSlotIdx) return;
-    const slotH = slot.hours;
+  // 점심 후처리: 전체 층 배치 완료 후 사람 단위로 검사
+  // 아침+오후 근무 중 점심 공백이 없는 사람 → 대체자가 가장 좋은 슬롯을 비우고 재배치
+  const lunchIdxs = timeSlots.map((s, i) => i).filter(i => isLunchSlot(timeSlots[i]));
+  if (lunchIdxs.length > 0) {
     DAYS.forEach(day => {
-      const taken = Object.values(schedule[day][si]).filter(Boolean);
-      let available = members.filter(m => !taken.includes(m.name) && canAssign(m.name, day, si, slotH));
-      if (available.length === 0)
-        available = members.filter(m => !taken.includes(m.name) && canAssignRelaxed(m.name, day, si, slotH));
-      if (available.length === 0) return;
-      available.sort((a, b) => weeklyHours[a.name] - weeklyHours[b.name]);
-      schedule[day][si]["f3b"] = available[0].name;
-      weeklyHours[available[0].name] += slotH;
-      dailyHours[available[0].name][day] += slotH;
-    });
-    if (si === 1 && halfSlotIdx === 0 && timeSlots.length > 1) {
-      DAYS.forEach(day => {
-        const nextName = schedule[day][1]["f3b"];
-        schedule[day][0]["f3b"] = nextName;
-        if (nextName) { weeklyHours[nextName] += timeSlots[0].hours; dailyHours[nextName][day] += timeSlots[0].hours; }
+      members.forEach(member => {
+        const name = member.name;
+        const hasMorning   = timeSlots.some((s, i) => isMorningSlot(s)   && FLOOR_KEYS.some(fk => schedule[day][i][fk] === name));
+        const hasAfternoon = timeSlots.some((s, i) => isAfternoonSlot(s) && FLOOR_KEYS.some(fk => schedule[day][i][fk] === name));
+        if (!hasMorning || !hasAfternoon) return;
+
+        const hasFreeLunch = lunchIdxs.some(si => !FLOOR_KEYS.some(fk => schedule[day][si][fk] === name));
+        if (hasFreeLunch) return;
+
+        // 점심에 배치된 슬롯×층 목록
+        const occupied = lunchIdxs
+          .map(si => ({ si, fk: FLOOR_KEYS.find(fk => schedule[day][si][fk] === name) }))
+          .filter(x => x.fk);
+
+        // 각 슬롯의 최적 대체자 우선순위 점수 (낮을수록 좋음)
+        const getSubScore = (si, fk) => {
+          const slotH = timeSlots[si].hours;
+          const taken = Object.values(schedule[day][si]).filter(n => n && n !== name);
+          const subs = members.filter(m => m.name !== name && !taken.includes(m.name) && canAssign(m.name, day, si, slotH));
+          if (subs.length === 0) return 999;
+          const prev = si > 0 ? schedule[day][si - 1][fk] : null;
+          if (subs.some(s => s.name === prev && prefersFloor1(s, fk))) return 0;
+          if (subs.some(s => prefersFloor1(s, fk))) return 1;
+          if (subs.some(s => s.name === prev && prefersFloor2(s, fk))) return 2;
+          if (subs.some(s => prefersFloor2(s, fk))) return 3;
+          if (subs.some(s => s.name === prev)) return 4;
+          return 5;
+        };
+
+        // 대체자가 가장 좋은 슬롯 선택
+        const toFree = occupied.reduce((best, curr) =>
+          getSubScore(curr.si, curr.fk) < getSubScore(best.si, best.fk) ? curr : best
+        );
+
+        // 슬롯 비우기
+        const { si: freeSi, fk: freeFk } = toFree;
+        const slotH = timeSlots[freeSi].hours;
+        schedule[day][freeSi][freeFk] = null;
+        weeklyHours[name] -= slotH;
+        dailyHours[name][day] -= slotH;
+
+        // 대체자 배치
+        const taken2 = Object.values(schedule[day][freeSi]).filter(Boolean);
+        const subs = members.filter(m => !taken2.includes(m.name) && canAssign(m.name, day, freeSi, slotH));
+        if (subs.length === 0) return;
+
+        const prev2 = freeSi > 0 ? schedule[day][freeSi - 1][freeFk] : null;
+        const p1 = subs.filter(m => prefersFloor1(m, freeFk));
+        let chosen;
+        if (p1.length > 0) {
+          chosen = p1.find(m => m.name === prev2) || sortByConsec(p1, day, freeSi)[0];
+        } else {
+          const p2 = subs.filter(m => prefersFloor2(m, freeFk));
+          if (p2.length > 0) {
+            chosen = p2.find(m => m.name === prev2) || sortByConsec(p2, day, freeSi)[0];
+          } else if (prev2 && subs.find(m => m.name === prev2)) {
+            chosen = subs.find(m => m.name === prev2);
+          } else {
+            chosen = sortByConsec(subs, day, freeSi)[0];
+          }
+        }
+
+        schedule[day][freeSi][freeFk] = chosen.name;
+        weeklyHours[chosen.name] += slotH;
+        dailyHours[chosen.name][day] += slotH;
       });
-    }
-  });
+    });
+  }
 
   return schedule;
 }
