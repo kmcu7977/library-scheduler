@@ -84,23 +84,19 @@ function isClassTime(member, day, si, timeSlots) {
 function getAvailableMembers(members, day, si, timeSlots) {
   return members.filter(m => !isClassTime(m, day, si, timeSlots));
 }
-function prefersFloor(member, key) {
-  return member.preferFloor ? member.preferFloor === KEY_TO_FLOOR[key] : false;
-}
+const prefersFloor1 = (member, key) => member.preferFloor1 ? member.preferFloor1 === KEY_TO_FLOOR[key] : false;
+const prefersFloor2 = (member, key) => member.preferFloor2 ? member.preferFloor2 === KEY_TO_FLOOR[key] : false;
 const isLunchSlot     = slot => slot.startH >= 12 && slot.startH < 14;
 const isAfternoonSlot = slot => slot.startH >= 14;
 const isMorningSlot   = slot => slot.startH < 12;
 
 // ─── 자동 배치 ───────────────────────────────────────────────────────────────
-// 우선순위
-// 배치 불가 필터: 수업충돌 / 주간한도 / 일일한도 / 점심보호
-// 0순위: 선호층 + 직전슬롯 연속 (즉시 확정)
-// 1순위: 선호층 그룹 내 직전슬롯 연속
-// 2순위: 선호층 + 주간시간 적은 순
-// 3순위: 직전슬롯 연속 (선호층 없는 인원)
-// 4순위: 오늘 근무 중 + 주간시간 적은 순
-// 5순위: 해당 요일 등교(수업 있음) + 주간시간 적은 순
-// 6순위: 주간시간 적은 순 (전체)
+// 층 우선 배치: f2 전체 → f4 전체 → f3a 전체 → f3b(잔여 인원)
+// 각 층 내: 슬롯 우선 × 요일 순 (배분 균등화)
+// 0순위: 1순위선호+직전연속  1순위: 1순위선호+주간시간
+// 2순위: 2순위선호+직전연속  3순위: 2순위선호+주간시간
+// 4순위: 직전연속           5순위: 오늘근무+주간시간
+// 6순위: 수업있는요일+주간시간  7순위: 주간시간
 function autoSchedule(members, timeSlots, cfg) {
   const schedule = {};
   DAYS.forEach(day => { schedule[day] = timeSlots.map(() => ({ f2: null, f3a: null, f3b: null, f4: null })); });
@@ -110,7 +106,6 @@ function autoSchedule(members, timeSlots, cfg) {
     dailyHours[m.name] = {};
     DAYS.forEach(d => { dailyHours[m.name][d] = 0; });
   });
-  // 0.5시간 슬롯은 항상 인접 슬롯과 동일 인원 — 배치 후 후처리
   const halfSlotIdx = timeSlots[0]?.hours === 0.5 ? 0 : -1;
 
   const hasMorningWork = (name, day) =>
@@ -145,7 +140,6 @@ function autoSchedule(members, timeSlots, cfg) {
     if (needsLunchBreak(name, day, si)) return false;
     return true;
   };
-  // 점심 보호 완화용: 수업충돌·한도만 체크 (needsLunchBreak 무시)
   const canAssignRelaxed = (name, day, si, slotH) => {
     const m = members.find(x => x.name === name);
     if (!m) return false;
@@ -159,79 +153,123 @@ function autoSchedule(members, timeSlots, cfg) {
     return m ? (m.classes || []).some(cls => cls.day === day) : false;
   };
 
-  DAYS.forEach(day => {
+  // 한 층(key)을 전체 슬롯 × 요일에 걸쳐 배치
+  const assignFloor = (key) => {
     timeSlots.forEach((slot, si) => {
       if (si === halfSlotIdx) return;
       const slotH = slot.hours;
-      const alreadyInSlot = () => Object.values(schedule[day][si]).filter(Boolean);
 
-      // f3b를 마지막에 배치해야 인원 부족 시 f4가 먼저 채워짐
-      ["f2", "f3a", "f4", "f3b"].forEach(key => {
-        // taken을 매 key마다 재계산해서 앞선 key 배치 결과를 반영
-        const taken = alreadyInSlot();
+      DAYS.forEach(day => {
+        const taken = Object.values(schedule[day][si]).filter(Boolean);
         let available = members.filter(m => !taken.includes(m.name) && canAssign(m.name, day, si, slotH));
-        // 점심 보호로 모두 배치 불가 시 완화: 각 층은 항상 1명 배치
         if (available.length === 0)
           available = members.filter(m => !taken.includes(m.name) && canAssignRelaxed(m.name, day, si, slotH));
         if (available.length === 0) return;
 
-        // 0순위: 선호층 + 직전 연속
+        const assign = name => {
+          schedule[day][si][key] = name;
+          weeklyHours[name] += slotH;
+          dailyHours[name][day] += slotH;
+        };
+
+        // 0순위: 1순위선호 + 직전 연속
         if (si > 0) {
           const prev = schedule[day][si - 1][key];
-          if (prev && !taken.includes(prev) && canAssign(prev, day, si, slotH) && prefersFloor(members.find(m => m.name === prev), key)) {
-            schedule[day][si][key] = prev; weeklyHours[prev] += slotH; dailyHours[prev][day] += slotH; return;
+          if (prev && !taken.includes(prev) && canAssign(prev, day, si, slotH) && prefersFloor1(members.find(m => m.name === prev), key)) {
+            assign(prev); return;
           }
         }
-
-        const preferred = available.filter(m => prefersFloor(m, key));
-        if (preferred.length > 0) {
-          // 1순위: 선호층 + 직전 연속
+        const pref1 = available.filter(m => prefersFloor1(m, key));
+        if (pref1.length > 0) {
           if (si > 0) {
             const prev = schedule[day][si - 1][key];
-            const cont = preferred.find(m => m.name === prev);
-            if (cont) { schedule[day][si][key] = cont.name; weeklyHours[cont.name] += slotH; dailyHours[cont.name][day] += slotH; return; }
+            const cont = pref1.find(m => m.name === prev);
+            if (cont) { assign(cont.name); return; }
           }
-          // 2순위: 선호층 + 주간시간 적은 순
-          preferred.sort((a, b) => weeklyHours[a.name] - weeklyHours[b.name]);
-          schedule[day][si][key] = preferred[0].name; weeklyHours[preferred[0].name] += slotH; dailyHours[preferred[0].name][day] += slotH; return;
+          // 1순위: 1순위선호 + 주간시간
+          pref1.sort((a, b) => weeklyHours[a.name] - weeklyHours[b.name]);
+          assign(pref1[0].name); return;
         }
 
-        // 3순위: 직전 연속
+        // 2순위: 2순위선호 + 직전 연속
         if (si > 0) {
           const prev = schedule[day][si - 1][key];
-          if (prev && !taken.includes(prev) && canAssign(prev, day, si, slotH)) {
-            schedule[day][si][key] = prev; weeklyHours[prev] += slotH; dailyHours[prev][day] += slotH; return;
+          if (prev && !taken.includes(prev) && canAssign(prev, day, si, slotH) && prefersFloor2(members.find(m => m.name === prev), key)) {
+            assign(prev); return;
           }
+        }
+        const pref2 = available.filter(m => prefersFloor2(m, key));
+        if (pref2.length > 0) {
+          if (si > 0) {
+            const prev = schedule[day][si - 1][key];
+            const cont = pref2.find(m => m.name === prev);
+            if (cont) { assign(cont.name); return; }
+          }
+          // 3순위: 2순위선호 + 주간시간
+          pref2.sort((a, b) => weeklyHours[a.name] - weeklyHours[b.name]);
+          assign(pref2[0].name); return;
+        }
+
+        // 4순위: 직전 연속
+        if (si > 0) {
+          const prev = schedule[day][si - 1][key];
+          if (prev && !taken.includes(prev) && canAssign(prev, day, si, slotH)) { assign(prev); return; }
         }
 
         const workingToday = new Set(timeSlots.slice(0, si).flatMap((_, pi) => Object.values(schedule[day][pi])).filter(Boolean));
-        // 4순위: 오늘 근무 중 + 주간시간
+        // 5순위: 오늘 근무 중 + 주간시간
         const todayWorking = available.filter(m => workingToday.has(m.name)).sort((a, b) => weeklyHours[a.name] - weeklyHours[b.name]);
-        if (todayWorking.length > 0) { schedule[day][si][key] = todayWorking[0].name; weeklyHours[todayWorking[0].name] += slotH; dailyHours[todayWorking[0].name][day] += slotH; return; }
+        if (todayWorking.length > 0) { assign(todayWorking[0].name); return; }
 
-        // 5순위: 해당 요일 등교 중(수업 있음) + 주간시간
+        // 6순위: 수업 있는 요일 + 주간시간
         const classToday = available.filter(m => hasClassOnDay(m.name, day)).sort((a, b) => weeklyHours[a.name] - weeklyHours[b.name]);
-        if (classToday.length > 0) { schedule[day][si][key] = classToday[0].name; weeklyHours[classToday[0].name] += slotH; dailyHours[classToday[0].name][day] += slotH; return; }
+        if (classToday.length > 0) { assign(classToday[0].name); return; }
 
-        // 6순위: 주간시간 적은 순
+        // 7순위: 주간시간 적은 순
         available.sort((a, b) => weeklyHours[a.name] - weeklyHours[b.name]);
-        schedule[day][si][key] = available[0].name; weeklyHours[available[0].name] += slotH; dailyHours[available[0].name][day] += slotH;
+        assign(available[0].name);
       });
 
-      // 0.5시간 첫 슬롯 즉시 처리: si=1 배치 직후 si=0 복사 및 시간 반영
-      // (후처리가 아닌 즉시 반영해야 이후 슬롯 한도 체크에 정확히 포함됨)
+      // halfSlot: si=1 직후 모든 요일 si=0 복사 및 시간 반영
       if (si === 1 && halfSlotIdx === 0 && timeSlots.length > 1) {
-        FLOOR_KEYS.forEach(fk => {
-          const nextName = schedule[day][1][fk];
-          schedule[day][0][fk] = nextName;
-          if (nextName) {
-            weeklyHours[nextName] += timeSlots[0].hours;
-            dailyHours[nextName][day] += timeSlots[0].hours;
-          }
+        DAYS.forEach(day => {
+          const nextName = schedule[day][1][key];
+          schedule[day][0][key] = nextName;
+          if (nextName) { weeklyHours[nextName] += timeSlots[0].hours; dailyHours[nextName][day] += timeSlots[0].hours; }
         });
       }
     });
+  };
+
+  // 층 우선 배치: f2 전체 → f4 전체 → f3a 전체
+  assignFloor("f2");
+  assignFloor("f4");
+  assignFloor("f3a");
+
+  // f3b: 3패스 완료 후 주간시간 덜 찬 잔여 인원으로 채움
+  timeSlots.forEach((slot, si) => {
+    if (si === halfSlotIdx) return;
+    const slotH = slot.hours;
+    DAYS.forEach(day => {
+      const taken = Object.values(schedule[day][si]).filter(Boolean);
+      let available = members.filter(m => !taken.includes(m.name) && canAssign(m.name, day, si, slotH));
+      if (available.length === 0)
+        available = members.filter(m => !taken.includes(m.name) && canAssignRelaxed(m.name, day, si, slotH));
+      if (available.length === 0) return;
+      available.sort((a, b) => weeklyHours[a.name] - weeklyHours[b.name]);
+      schedule[day][si]["f3b"] = available[0].name;
+      weeklyHours[available[0].name] += slotH;
+      dailyHours[available[0].name][day] += slotH;
+    });
+    if (si === 1 && halfSlotIdx === 0 && timeSlots.length > 1) {
+      DAYS.forEach(day => {
+        const nextName = schedule[day][1]["f3b"];
+        schedule[day][0]["f3b"] = nextName;
+        if (nextName) { weeklyHours[nextName] += timeSlots[0].hours; dailyHours[nextName][day] += timeSlots[0].hours; }
+      });
+    }
   });
+
   return schedule;
 }
 
@@ -480,7 +518,7 @@ function OperationSetup({ cfg, onNext }) {
 function MemberSetup({ members, setMembers, onNext, onBack }) {
   const [form, setForm] = useState({ name: "", ...EMPTY_INFO });
   const [editTarget, setEditTarget] = useState(null);
-  const [editInfo, setEditInfo] = useState({ ...EMPTY_INFO, preferFloor: null });
+  const [editInfo, setEditInfo] = useState({ ...EMPTY_INFO, preferFloor1: null, preferFloor2: null });
   const upForm = (f, v) => setForm(prev => ({ ...prev, [f]: v }));
 
   const addMember = () => {
@@ -489,14 +527,14 @@ function MemberSetup({ members, setMembers, onNext, onBack }) {
     setMembers(prev => [...prev, {
       name: n, dept: form.dept.trim(), studentId: form.studentId.trim(),
       phone: form.phone.trim(), note: form.note.trim(),
-      color: DEFAULT_COLORS[prev.length % DEFAULT_COLORS.length], classes: [], preferFloor: null,
+      color: DEFAULT_COLORS[prev.length % DEFAULT_COLORS.length], classes: [], preferFloor1: null, preferFloor2: null,
     }]);
     setForm({ name: "", ...EMPTY_INFO });
   };
 
   const openEdit = m => {
     setEditTarget(m.name);
-    setEditInfo({ dept: m.dept||"", studentId: m.studentId||"", phone: m.phone||"", note: m.note||"", preferFloor: m.preferFloor||null });
+    setEditInfo({ dept: m.dept||"", studentId: m.studentId||"", phone: m.phone||"", note: m.note||"", preferFloor1: m.preferFloor1||null, preferFloor2: m.preferFloor2||null });
   };
   const saveEdit = () => {
     setMembers(prev => prev.map(m => m.name !== editTarget ? m : { ...m, ...editInfo }));
@@ -531,7 +569,7 @@ function MemberSetup({ members, setMembers, onNext, onBack }) {
             <span className="pref-col-name">이름</span>
             <span style={{ flex: 1, fontSize: 11, color: "#78909c" }}>학과 / 학번</span>
             <span style={{ minWidth: 110, fontSize: 11, color: "#78909c" }}>연락처</span>
-            <span style={{ minWidth: 130, fontSize: 11, color: "#78909c" }}>선호 층</span>
+            <span style={{ minWidth: 180, fontSize: 11, color: "#78909c" }}>선호 층 (1순위 / 2순위)</span>
             <span style={{ minWidth: 70, fontSize: 11, color: "#78909c" }}>비고</span>
             <span style={{ minWidth: 28 }} />
           </div>
@@ -545,15 +583,29 @@ function MemberSetup({ members, setMembers, onNext, onBack }) {
                 {m.studentId && <span style={{ color: "#546e7a", marginLeft: 6 }}>({m.studentId})</span>}
               </span>
               <span style={{ minWidth: 110, fontSize: 11, color: "#607d8b" }}>{m.phone || <span style={{ color: "#b0bec5" }}>—</span>}</span>
-              <div style={{ minWidth: 130, display: "flex", gap: 4 }}>
-                {FLOOR_OPTIONS.map(floor => (
-                  <button key={floor}
-                    className={"pref-floor-btn" + (m.preferFloor === floor ? " selected" : "")}
-                    style={m.preferFloor === floor ? { borderColor: m.color, color: m.color, background: m.color + "22" } : {}}
-                    onClick={() => setMembers(prev => prev.map(x => x.name !== m.name ? x : { ...x, preferFloor: x.preferFloor === floor ? null : floor }))}>
-                    {m.preferFloor === floor && "✓ "}{floor}
-                  </button>
-                ))}
+              <div style={{ minWidth: 180, display: "flex", flexDirection: "column", gap: 3 }}>
+                <div style={{ display: "flex", gap: 3, alignItems: "center" }}>
+                  <span style={{ fontSize: 10, color: "#90a4ae", minWidth: 28 }}>1순위</span>
+                  {FLOOR_OPTIONS.map(floor => (
+                    <button key={floor}
+                      className={"pref-floor-btn" + (m.preferFloor1 === floor ? " selected" : "")}
+                      style={m.preferFloor1 === floor ? { borderColor: m.color, color: m.color, background: m.color + "22" } : {}}
+                      onClick={() => setMembers(prev => prev.map(x => x.name !== m.name ? x : { ...x, preferFloor1: x.preferFloor1 === floor ? null : floor }))}>
+                      {m.preferFloor1 === floor && "✓ "}{floor}
+                    </button>
+                  ))}
+                </div>
+                <div style={{ display: "flex", gap: 3, alignItems: "center" }}>
+                  <span style={{ fontSize: 10, color: "#b0bec5", minWidth: 28 }}>2순위</span>
+                  {FLOOR_OPTIONS.map(floor => (
+                    <button key={floor}
+                      className={"pref-floor-btn" + (m.preferFloor2 === floor ? " selected" : "")}
+                      style={m.preferFloor2 === floor ? { borderColor: m.color + "99", color: m.color + "99", background: m.color + "11" } : { opacity: 0.65 }}
+                      onClick={() => setMembers(prev => prev.map(x => x.name !== m.name ? x : { ...x, preferFloor2: x.preferFloor2 === floor ? null : floor }))}>
+                      {m.preferFloor2 === floor && "✓ "}{floor}
+                    </button>
+                  ))}
+                </div>
               </div>
               <span style={{ minWidth: 70, fontSize: 11, color: "#607d8b", overflow: "hidden", textOverflow: "ellipsis" }}>{m.note || ""}</span>
               <button className="remove-btn" onClick={() => setMembers(prev => prev.filter(x => x.name !== m.name))}>✕</button>
@@ -583,24 +635,37 @@ function MemberSetup({ members, setMembers, onNext, onBack }) {
                     onChange={e => setEditInfo(prev => ({ ...prev, [key]: e.target.value }))} />
                 </div>
               ))}
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <label style={{ minWidth: 44, fontSize: 12, color: "#546e7a" }}>선호 층</label>
-                <div style={{ display: "flex", gap: 6 }}>
-                  {FLOOR_OPTIONS.map(floor => {
-                    const color = members.find(m => m.name === editTarget)?.color || "#1976d2";
-                    const sel = editInfo.preferFloor === floor;
-                    return (
-                      <button key={floor} className={"pref-floor-btn" + (sel ? " selected" : "")}
-                        style={sel ? { borderColor: color, color, background: color + "22" } : {}}
-                        onClick={() => setEditInfo(prev => ({ ...prev, preferFloor: prev.preferFloor === floor ? null : floor }))}>
-                        {sel && "✓ "}{floor}
-                      </button>
-                    );
-                  })}
-                  {editInfo.preferFloor && (
-                    <button className="pref-floor-btn" style={{ borderColor: "#444", color: "#666", fontSize: 11 }}
-                      onClick={() => setEditInfo(prev => ({ ...prev, preferFloor: null }))}>해제</button>
-                  )}
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+                <label style={{ minWidth: 44, fontSize: 12, color: "#546e7a", paddingTop: 4 }}>선호 층</label>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                    <span style={{ fontSize: 11, color: "#90a4ae", minWidth: 36 }}>1순위</span>
+                    {FLOOR_OPTIONS.map(floor => {
+                      const color = members.find(m => m.name === editTarget)?.color || "#1976d2";
+                      const sel = editInfo.preferFloor1 === floor;
+                      return (
+                        <button key={floor} className={"pref-floor-btn" + (sel ? " selected" : "")}
+                          style={sel ? { borderColor: color, color, background: color + "22" } : {}}
+                          onClick={() => setEditInfo(prev => ({ ...prev, preferFloor1: prev.preferFloor1 === floor ? null : floor }))}>
+                          {sel && "✓ "}{floor}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                    <span style={{ fontSize: 11, color: "#b0bec5", minWidth: 36 }}>2순위</span>
+                    {FLOOR_OPTIONS.map(floor => {
+                      const color = members.find(m => m.name === editTarget)?.color || "#1976d2";
+                      const sel = editInfo.preferFloor2 === floor;
+                      return (
+                        <button key={floor} className={"pref-floor-btn" + (sel ? " selected" : "")}
+                          style={sel ? { borderColor: color + "99", color: color + "99", background: color + "11" } : { opacity: 0.65 }}
+                          onClick={() => setEditInfo(prev => ({ ...prev, preferFloor2: prev.preferFloor2 === floor ? null : floor }))}>
+                          {sel && "✓ "}{floor}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             </div>
