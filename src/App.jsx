@@ -148,13 +148,18 @@ function autoSchedule(members, timeSlots, cfg) {
       return d !== 0 ? d : weeklyHours[a.name] - weeklyHours[b.name];
     });
 
-  // 2순위 선호 인원 → 수업 없는 가장 이른 요일 17시~에 강제 배치
+  // 2순위 선호 인원 → 수업 있는 날 우선, 없으면 이른 요일 17시~에 강제 배치
   const FLOOR_TO_MAIN_KEY = { "2층": "f2", "3층": "f3a", "4층": "f4" };
   const preAssignEvening = () => {
     members.filter(m => m.preferFloor2).forEach(member => {
       const prefKey = FLOOR_TO_MAIN_KEY[member.preferFloor2];
       if (!prefKey) return;
-      for (const day of DAYS) {
+      const hasClass = d => (member.classes || []).some(cls => cls.day === d);
+      const sortedDays = [...DAYS].sort((a, b) => {
+        const sa = hasClass(a) ? 0 : 1, sb = hasClass(b) ? 0 : 1;
+        return sa !== sb ? sa - sb : DAYS.indexOf(a) - DAYS.indexOf(b);
+      });
+      for (const day of sortedDays) {
         const hasEveningClass = timeSlots.some((s, i) => s.startH >= 17 && isClassTime(member, day, i, timeSlots));
         if (hasEveningClass) continue;
         let anyAssigned = false;
