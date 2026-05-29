@@ -78,7 +78,10 @@ function isClassTime(member, day, si, timeSlots) {
   return member.classes.some(cls => {
     if (cls.day !== day) return false;
     const cs = cls.startHour + cls.startMin / 60, ce = cls.endHour + cls.endMin / 60;
-    return cs < endH && ce > startH;
+    if (cs < endH && ce > startH) return true;
+    // 점심(12~14시)에 근로 끝나고 바로 수업 시작이면 직전 슬롯도 차단
+    if (Math.abs(endH - cs) < 0.01 && endH >= 12 && endH <= 14) return true;
+    return false;
   });
 }
 function getAvailableMembers(members, day, si, timeSlots) {
@@ -175,15 +178,16 @@ function autoSchedule(members, timeSlots, cfg) {
           assign(sortByConsec(pref1, day, si)[0].name); return;
         }
 
-        // 2순위: 2순위선호 + 직전연속
-        if (prevAvail && prefersFloor2(members.find(m => m.name === prev), key)) { assign(prev); return; }
-
-        const pref2 = available.filter(m => prefersFloor2(m, key));
-        if (pref2.length > 0) {
-          const cont = pref2.find(m => m.name === prev);
-          if (cont) { assign(cont.name); return; }
-          // 3순위: 2순위선호 + 연속커버수
-          assign(sortByConsec(pref2, day, si)[0].name); return;
+        // 2순위: 2순위선호 + 직전연속 (야간 17:00 이후만)
+        if (slot.startH >= 17) {
+          if (prevAvail && prefersFloor2(members.find(m => m.name === prev), key)) { assign(prev); return; }
+          const pref2 = available.filter(m => prefersFloor2(m, key));
+          if (pref2.length > 0) {
+            const cont = pref2.find(m => m.name === prev);
+            if (cont) { assign(cont.name); return; }
+            // 3순위: 2순위선호 + 연속커버수
+            assign(sortByConsec(pref2, day, si)[0].name); return;
+          }
         }
 
         // 4순위: 직전연속
@@ -257,9 +261,9 @@ function autoSchedule(members, timeSlots, cfg) {
         weeklyHours[name] -= slotH;
         dailyHours[name][day] -= slotH;
 
-        // 대체자 배치
+        // 대체자 배치 (본인 제외)
         const taken2 = Object.values(schedule[day][freeSi]).filter(Boolean);
-        const subs = members.filter(m => !taken2.includes(m.name) && canAssign(m.name, day, freeSi, slotH));
+        const subs = members.filter(m => m.name !== name && !taken2.includes(m.name) && canAssign(m.name, day, freeSi, slotH));
         if (subs.length === 0) return;
 
         const prev2 = freeSi > 0 ? schedule[day][freeSi - 1][freeFk] : null;
