@@ -213,9 +213,8 @@ function autoSchedule(members, timeSlots, cfg) {
   assignFloor("f2");
   assignFloor("f4");
   assignFloor("f3a");
-  assignFloor("f3b");
 
-  // 점심 후처리: 전체 층 배치 완료 후 사람 단위로 검사
+  // 점심 후처리: f3b 전에 실행 — f2+f4+f3a 후 여유시간(~32.5h) 있을 때 대체자 확보
   // 아침+오후 근무 중 점심 공백이 없는 사람 → 대체자가 가장 좋은 슬롯을 비우고 재배치
   const lunchIdxs = timeSlots.map((s, i) => i).filter(i => isLunchSlot(timeSlots[i]));
   if (lunchIdxs.length > 0) {
@@ -288,6 +287,8 @@ function autoSchedule(members, timeSlots, cfg) {
       });
     });
   }
+
+  assignFloor("f3b");
 
   return schedule;
 }
