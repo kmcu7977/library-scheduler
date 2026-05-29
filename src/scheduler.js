@@ -90,6 +90,17 @@ export function autoSchedule(members, timeSlots, cfg) {
       schedule[day][si][key] = name;
       weeklyHours[name] += slotH;
       dailyHours[name][day] += slotH;
+      // 0.5h 첫 슬롯 미러: si=1 배치 시점에 즉시 si=0도 같은 사람으로 채움
+      // (맨 마지막에 복사하면 한도가 차 있어 누락되므로 배치 직후 처리)
+      if (halfSlotIdx === 0 && si === 1 && schedule[day][0][key] === null) {
+        const h0 = timeSlots[0].hours;
+        const m0 = members.find(x => x.name === name);
+        if (m0 && !isClassTime(m0, day, 0, timeSlots) && !FLOOR_KEYS.some(fk => schedule[day][0][fk] === name)) {
+          schedule[day][0][key] = name;
+          weeklyHours[name] += h0;
+          dailyHours[name][day] += h0;
+        }
+      }
     };
 
     const prev = si > 0 ? schedule[day][si - 1][key] : null;
@@ -124,44 +135,20 @@ export function autoSchedule(members, timeSlots, cfg) {
     assign(byLoad(avail, day, si)[0].name);
   };
 
-  // 슬롯 우선 × 요일 균등 패스. slotFilter로 저녁/주간 단계를 분리한다.
-  const assignPass = (key, slotFilter) => {
+  // 슬롯 우선 × 요일 균등 단일 패스(층별). 슬롯을 오전→저녁 순서로 한 번에 처리해
+  // 한 근로자의 근무가 끊기지 않고 연속 블록으로 이어지도록 한다. (단계 분리 없음)
+  const assignFloor = (key) => {
     timeSlots.forEach((slot, si) => {
-      if (si === halfSlotIdx) return;       // 0.5h 첫 슬롯은 마지막에 복사
-      if (!slotFilter(slot)) return;
+      if (si === halfSlotIdx) return;       // 0.5h 첫 슬롯은 si=1 배치 시 미러로 채움
       DAYS.forEach(day => fillCell(key, day, si, slot));
     });
   };
 
-  const isEvening = s => s.startH >= 17;
-  const isDaytime = s => s.startH < 17;
-  const MAIN = ["f2", "f4", "f3a"];
-
-  // 1단계: 채우기 어려운 저녁부터 (1순위 → 2순위), 2단계: 주간(점심 보호 포함)
-  MAIN.forEach(k => assignPass(k, isEvening));
-  MAIN.forEach(k => assignPass(k, isDaytime));
-  // 3층 둘째 칸(f3b)은 잔여 인원으로 overflow 처리
-  assignPass("f3b", isEvening);
-  assignPass("f3b", isDaytime);
-
-  // 0.5h 첫 슬롯: 다음 슬롯(si=1) 배치를 그대로 복사 (제약 충족 시에만)
-  if (halfSlotIdx === 0 && timeSlots.length > 1) {
-    const h0 = timeSlots[0].hours;
-    DAYS.forEach(day => {
-      FLOOR_KEYS.forEach(key => {
-        const nm = schedule[day][1][key];
-        if (!nm || schedule[day][0][key] !== null) return;
-        const m = members.find(x => x.name === nm);
-        if (!m || isClassTime(m, day, 0, timeSlots)) return;
-        if (FLOOR_KEYS.some(fk => schedule[day][0][fk] === nm)) return;   // 같은 칸 중복 방지
-        if (weeklyHours[nm] + h0 > cfg.maxWeeklyHours) return;
-        if (dailyHours[nm][day] + h0 > cfg.maxDailyHours) return;
-        schedule[day][0][key] = nm;
-        weeklyHours[nm] += h0;
-        dailyHours[nm][day] += h0;
-      });
-    });
-  }
+  // 2층 → 4층 → 3층(f3a) → 3층 둘째칸(f3b, overflow 잔여)
+  assignFloor("f2");
+  assignFloor("f4");
+  assignFloor("f3a");
+  assignFloor("f3b");
 
   return schedule;
 }
