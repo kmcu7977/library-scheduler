@@ -72,6 +72,11 @@ export function autoSchedule(members, timeSlots, cfg) {
       return dailyHours[a.name][day] - dailyHours[b.name][day];
     });
 
+  // 17시 이후엔 교대가 없으므로, 저녁 자리는 마감까지 연속 근무 가능한 사람만 후보로 둔다.
+  // si부터 마지막 슬롯까지 끊김 없이 갈 수 있으면 true.
+  const lastIdx = timeSlots.length - 1;
+  const reachesClose = (name, day, si) => si + countConsecutive(name, day, si) > lastIdx;
+
   // 한 칸(요일·슬롯·층) 배치
   const fillCell = (key, day, si, slot) => {
     if (schedule[day][si][key] !== null) return;
@@ -85,6 +90,13 @@ export function autoSchedule(members, timeSlots, cfg) {
       avail = members.filter(m => !taken.includes(m.name) && canAssign(m.name, day, si, slotH, false));
     }
     if (avail.length === 0) return;
+
+    // 저녁(17시 이후): 마감까지 갈 수 있는 사람이 있으면 그 사람들로만 후보를 좁힌다.
+    // → 17시에 들어간 사람이 마감까지 근무(중간 교대 없음). 없으면 부득이 전체에서 채움.
+    if (evening) {
+      const closers = avail.filter(m => reachesClose(m.name, day, si));
+      if (closers.length > 0) avail = closers;
+    }
 
     const assign = name => {
       schedule[day][si][key] = name;
