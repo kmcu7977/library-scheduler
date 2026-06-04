@@ -31,9 +31,7 @@ export function isClassTime(member, day, si, timeSlots) {
   return member.classes.some(cls => {
     if (cls.day !== day) return false;
     const cs = cls.startHour + cls.startMin / 60, ce = cls.endHour + cls.endMin / 60;
-    if (cs < endH && ce > startH) return true;
-    if (Math.abs(endH - cs) < 0.01 && endH >= 12 && endH <= 14) return true;
-    return false;
+    return cs < endH && ce > startH;
   });
 }
 

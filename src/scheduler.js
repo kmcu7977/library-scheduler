@@ -21,7 +21,9 @@ export function autoSchedule(members, timeSlots, cfg) {
     const m = members.find(x => x.name === name);
     if (!m) return false;
     if (isClassTime(m, day, si, timeSlots)) return false;
-    if (weeklyHours[name] + slotH > cfg.maxWeeklyHours) return false;
+    if (m.timeSlot === "주간" && timeSlots[si].startH >= 17) return false; // 주간 선호 → 저녁 제외
+    const maxW = m.isNight ? (cfg.maxNightWeeklyHours ?? cfg.maxWeeklyHours) : cfg.maxWeeklyHours;
+    if (weeklyHours[name] + slotH > maxW) return false;
     if (dailyHours[name][day] + slotH > cfg.maxDailyHours) return false;
     if (protectLunch && lunchIdxs.length >= 2 && lunchIdxs.includes(si)) {
       const otherLunchTaken = lunchIdxs.some(li =>
@@ -41,30 +43,46 @@ export function autoSchedule(members, timeSlots, cfg) {
     let count = 0, wh = weeklyHours[name], dh = dailyHours[name][day];
     const m = members.find(x => x.name === name);
     if (!m) return 0;
+    const maxW = m.isNight ? (cfg.maxNightWeeklyHours ?? cfg.maxWeeklyHours) : cfg.maxWeeklyHours;
     for (let si = startSi; si < timeSlots.length; si++) {
       if (si === halfSlotIdx) continue;
       const slotH = timeSlots[si].hours;
       if (isClassTime(m, day, si, timeSlots)) break;
-      if (wh + slotH > cfg.maxWeeklyHours || dh + slotH > cfg.maxDailyHours) break;
+      if (m.timeSlot === "주간" && timeSlots[si].startH >= 17) break;
+      if (wh + slotH > maxW || dh + slotH > cfg.maxDailyHours) break;
+      // 다른 층에 이미 배치된 슬롯은 연속 체인을 끊는다 (reachesClose 오판 방지)
+      if (FLOOR_KEYS.some(fk => schedule[day][si][fk] === name)) break;
       count++; wh += slotH; dh += slotH;
     }
     return count;
   };
 
-  // 균형 우선 정렬: 주간시간 적은 사람 → 그날 시간 적은 사람 → 연속근무 길게 가능한 사람
-  const byLoad = (list, day, si) =>
-    [...list].sort((a, b) => {
-      const w = weeklyHours[a.name] - weeklyHours[b.name];
-      if (w !== 0) return w;
-      const d = dailyHours[a.name][day] - dailyHours[b.name][day];
-      if (d !== 0) return d;
-      return countConsecutive(b.name, day, si) - countConsecutive(a.name, day, si);
-    });
+  // 잔여 한도 비율 (0~1): 절대값 대신 비율 기준으로 정렬해야 야간 학생이 f2를 독점하지 않음
+  // 예) 탁연주 15/30h=0.5 vs 성창영 15/20h=0.75 → 성창영 우선
+  const remainingRatio = m => {
+    const maxW = m.isNight ? (cfg.maxNightWeeklyHours ?? cfg.maxWeeklyHours) : cfg.maxWeeklyHours;
+    return (maxW - weeklyHours[m.name]) / maxW;
+  };
 
-  // 선호층 패킹용(best-fit): 한 번에 길게 일할 수 있는 사람부터.
-  // 연속근무 가능시간↓ → 주간시간↑(같으면 덜 일한 사람) → 그날시간↑
+  // 현재 슬롯 시간대와 선호가 맞으면 +1, 아니면 0 (강제 아닌 soft 우선)
+  const timeBoost = (m, si) => {
+    if (!m.timeSlot) return 0;
+    const h = timeSlots[si].startH;
+    if (m.timeSlot === "주간" && h < 13) return 1;
+    if (m.timeSlot === "야간" && h >= 13) return 1;
+    return 0;
+  };
+
+  // 일반 학생 우선 → 잔여 비율 → 시간대 선호 → 긴 연속블록 → 주간↑ → 일일↑
+  // 야간 학생(isNight)은 일반 학생이 모두 채운 뒤 남은 슬롯을 채운다
   const byBlock = (list, day, si) =>
     [...list].sort((a, b) => {
+      const night = (a.isNight ? 1 : 0) - (b.isNight ? 1 : 0);
+      if (night !== 0) return night;
+      const r = remainingRatio(b) - remainingRatio(a);
+      if (r !== 0) return r;
+      const tb = timeBoost(b, si) - timeBoost(a, si);
+      if (tb !== 0) return tb;
       const c = countConsecutive(b.name, day, si) - countConsecutive(a.name, day, si);
       if (c !== 0) return c;
       const w = weeklyHours[a.name] - weeklyHours[b.name];
@@ -84,10 +102,25 @@ export function autoSchedule(members, timeSlots, cfg) {
     const evening = slot.startH >= 17;
     const taken = Object.values(schedule[day][si]).filter(Boolean);
 
-    let avail = members.filter(m => !taken.includes(m.name) && canAssign(m.name, day, si, slotH, true));
+    // 선호층 배치 제약:
+    // - 선호층이 설정된 인원은 자기 선호층 우선
+    // - 2층/4층 선호 인원은 해당 슬롯의 자기 층이 이미 채워진 경우에만 3층에 overflow 허용
+    // - 2층↔4층 간 교차 배치는 금지
+    const pref1Blocked = m => {
+      if (!m.preferFloor1) return false;
+      if (prefersFloor1(m, key)) return false;
+      if (key === "f3a" || key === "f3b") {
+        const prefKey = m.preferFloor1 === "2층" ? "f2" : m.preferFloor1 === "4층" ? "f4" : null;
+        if (!prefKey) return true; // pref1=3층 인원은 위에서 이미 처리
+        return schedule[day][si][prefKey] === null; // 자기 층이 빈 경우 3층 차단
+      }
+      return true;
+    };
+
+    let avail = members.filter(m => !taken.includes(m.name) && !pref1Blocked(m) && canAssign(m.name, day, si, slotH, true));
     if (avail.length === 0) {
       // 점심 보호를 풀어야만 채울 수 있으면 완화
-      avail = members.filter(m => !taken.includes(m.name) && canAssign(m.name, day, si, slotH, false));
+      avail = members.filter(m => !taken.includes(m.name) && !pref1Blocked(m) && canAssign(m.name, day, si, slotH, false));
     }
     if (avail.length === 0) return;
 
@@ -107,7 +140,9 @@ export function autoSchedule(members, timeSlots, cfg) {
       if (halfSlotIdx === 0 && si === 1 && schedule[day][0][key] === null) {
         const h0 = timeSlots[0].hours;
         const m0 = members.find(x => x.name === name);
-        if (m0 && !isClassTime(m0, day, 0, timeSlots) && !FLOOR_KEYS.some(fk => schedule[day][0][fk] === name)) {
+        const maxW0 = m0?.isNight ? (cfg.maxNightWeeklyHours ?? cfg.maxWeeklyHours) : cfg.maxWeeklyHours;
+        if (m0 && !isClassTime(m0, day, 0, timeSlots) && !FLOOR_KEYS.some(fk => schedule[day][0][fk] === name)
+            && weeklyHours[name] + h0 <= maxW0 && dailyHours[name][day] + h0 <= cfg.maxDailyHours) {
           schedule[day][0][key] = name;
           weeklyHours[name] += h0;
           dailyHours[name][day] += h0;

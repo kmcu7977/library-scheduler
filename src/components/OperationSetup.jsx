@@ -77,6 +77,13 @@ export default function OperationSetup({ cfg, onNext }) {
               <span className="cfg-colon">시간 / 일</span>
             </div>
           </div>
+          <div className="cfg-row">
+            <label className="cfg-label">야간 주간 한도</label>
+            <div className="cfg-time-inputs">
+              <input type="number" className="cfg-num wide" min={1} max={60} value={localCfg.maxNightWeeklyHours ?? localCfg.maxWeeklyHours} onChange={e => update("maxNightWeeklyHours", e.target.value)} />
+              <span className="cfg-colon">시간 / 주</span>
+            </div>
+          </div>
           <div className="cfg-summary">
             <div className="cfg-summary-item"><span>총 슬롯 수</span><strong>{preview.length}개</strong></div>
             <div className="cfg-summary-item">

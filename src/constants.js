@@ -9,7 +9,7 @@ export const DEFAULT_COLORS = [
   "#C678DD","#61AFEF","#D19A66","#BE5046","#2ECC71",
 ];
 export const PRESETS = {
-  semester: { label: "학기 중", openHour: 8, openMin: 30, closeHour: 21, closeMin: 0, firstSlotMins: 90, slotMins: 60, maxWeeklyHours: 20, maxDailyHours: 8 },
-  vacation: { label: "방학",    openHour: 9, openMin: 0,  closeHour: 18, closeMin: 0, firstSlotMins: 60, slotMins: 60, maxWeeklyHours: 40, maxDailyHours: 8 },
+  semester: { label: "학기 중", openHour: 8, openMin: 30, closeHour: 21, closeMin: 0, firstSlotMins: 90, slotMins: 60, maxWeeklyHours: 20, maxDailyHours: 8, maxNightWeeklyHours: 30 },
+  vacation: { label: "방학",    openHour: 9, openMin: 0,  closeHour: 18, closeMin: 0, firstSlotMins: 60, slotMins: 60, maxWeeklyHours: 40, maxDailyHours: 8, maxNightWeeklyHours: 40 },
 };
 export const EMPTY_INFO = { dept: "", studentId: "", phone: "", note: "" };

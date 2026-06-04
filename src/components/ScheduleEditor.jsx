@@ -20,6 +20,21 @@ export default function ScheduleEditor({ members, schedule, setSchedule, onExpor
     return map;
   }, [members, schedule, timeSlots]);
 
+  const nightHourMap = useMemo(() => {
+    const map = {};
+    members.forEach(m => { map[m.name] = 0; });
+    DAYS.forEach(day => {
+      timeSlots.forEach((slot, si) => {
+        if (slot.startH < 17) return;
+        FLOOR_KEYS.forEach(fk => {
+          const n = schedule[day]?.[si]?.[fk];
+          if (n && map[n] !== undefined) map[n] += slot.hours;
+        });
+      });
+    });
+    return map;
+  }, [members, schedule, timeSlots]);
+
   const assignMember = name => {
     if (!editCell) return;
     const { day, si, fk } = editCell;
@@ -32,18 +47,33 @@ export default function ScheduleEditor({ members, schedule, setSchedule, onExpor
       <div className="editor-header">
         <h2 className="step-title" style={{ margin: 0 }}>③ 시간표 확인 및 수정</h2>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <div className="cfg-badge">🕐 {cfg.openHour}:{String(cfg.openMin).padStart(2,"0")}~{cfg.closeHour}:{String(cfg.closeMin).padStart(2,"0")} · 주{cfg.maxWeeklyHours}h / 일{cfg.maxDailyHours}h</div>
+          <div className="cfg-badge">🕐 {cfg.openHour}:{String(cfg.openMin).padStart(2,"0")}~{cfg.closeHour}:{String(cfg.closeMin).padStart(2,"0")} · 주{cfg.maxWeeklyHours}h{cfg.maxNightWeeklyHours && cfg.maxNightWeeklyHours !== cfg.maxWeeklyHours ? `(야간${cfg.maxNightWeeklyHours}h)` : ""} / 일{cfg.maxDailyHours}h</div>
           <div className="hover-hint">💡 이름에 마우스 올리면 대체 인원 표시</div>
         </div>
       </div>
       <div className="weekly-bar">
         {members.map(m => {
-          const h = weeklyMap[m.name] || 0, over = h > cfg.maxWeeklyHours;
+          const maxW = m.isNight ? (cfg.maxNightWeeklyHours ?? cfg.maxWeeklyHours) : cfg.maxWeeklyHours;
+          const h = weeklyMap[m.name] || 0;
+          const nh = nightHourMap[m.name] || 0;
+          const over = h > maxW;
+          const fillPct = Math.min(h / maxW * 100, 100);
+          const nightPct = h > 0 ? (nh / h) * fillPct : 0;
+          const dayPct = fillPct - nightPct;
           return (
             <div key={m.name} className="weekly-item">
-              <span className="weekly-name" style={{ color: m.color }}>{m.name}</span>
-              <div className="weekly-track"><div className="weekly-fill" style={{ width: `${Math.min(h / cfg.maxWeeklyHours * 100, 100)}%`, background: over ? "#e06c75" : m.color }} /></div>
-              <span className={`weekly-h ${over ? "over" : ""}`}>{h} / {cfg.maxWeeklyHours}h</span>
+              <span className="weekly-name" style={{ color: m.color }}>
+                {m.name}
+                {m.isNight && <span style={{ marginLeft: 4, fontSize: 10, fontWeight: 700, background: "#1a237e", color: "#fff", borderRadius: 4, padding: "1px 4px" }}>야</span>}
+              </span>
+              <div className="weekly-track" style={{ display: "flex" }}>
+                <div style={{ width: `${dayPct}%`, height: "100%", background: over ? "#e06c75" : m.color, borderRadius: "3px 0 0 3px" }} />
+                <div style={{ width: `${nightPct}%`, height: "100%", background: over ? "#b71c1c" : "#1a237e", borderRadius: nightPct > 0 ? "0 3px 3px 0" : 0 }} />
+              </div>
+              <span className={`weekly-h ${over ? "over" : ""}`}>
+                {h} / {maxW}h
+                {nh > 0 && <span style={{ fontSize: 10, color: "#5c6bc0", marginLeft: 3 }}>(야{nh}h)</span>}
+              </span>
             </div>
           );
         })}
