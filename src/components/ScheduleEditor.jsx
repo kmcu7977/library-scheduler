@@ -5,6 +5,7 @@ import ScheduleCell from "./ScheduleCell";
 
 export default function ScheduleEditor({ members, schedule, setSchedule, onExport, onBack, timeSlots, cfg }) {
   const [editCell, setEditCell] = useState(null);
+  const [hoveredMember, setHoveredMember] = useState(null);
 
   const weeklyMap = useMemo(() => {
     const map = {};
@@ -98,13 +99,22 @@ export default function ScheduleEditor({ members, schedule, setSchedule, onExpor
               <tr key={si}>
                 <td className="td-time">{slot.label}</td>
                 {DAYS.flatMap(day => {
-                  const f3b = schedule[day]?.[si]?.f3b;
-                  const merge3 = !f3b;
+                  const cellProps = (fk) => ({
+                    key: `${day}-${fk}`,
+                    fk, day, si, members, schedule, timeSlots,
+                    name: schedule[day]?.[si]?.[fk] || "",
+                    active: editCell?.day === day && editCell?.si === si && editCell?.fk === fk,
+                    onClick: () => setEditCell({ day, si, fk }),
+                    onHoverMember: setHoveredMember,
+                    dim: hoveredMember
+                      ? isClassTime(members.find(m => m.name === hoveredMember), day, si, timeSlots)
+                      : false,
+                  });
                   return [
-                    <ScheduleCell key={`${day}-f2`}  fk="f2"  name={schedule[day]?.[si]?.f2  || ""} day={day} si={si} members={members} schedule={schedule} timeSlots={timeSlots} active={editCell?.day === day && editCell?.si === si && editCell?.fk === "f2"}  onClick={() => setEditCell({ day, si, fk: "f2"  })} />,
-                    <ScheduleCell key={`${day}-f3a`} fk="f3a" name={schedule[day]?.[si]?.f3a || ""} colSpan={merge3 ? 2 : 1} day={day} si={si} members={members} schedule={schedule} timeSlots={timeSlots} active={editCell?.day === day && editCell?.si === si && editCell?.fk === "f3a"} onClick={() => setEditCell({ day, si, fk: "f3a" })} />,
-                    ...(merge3 ? [] : [<ScheduleCell key={`${day}-f3b`} fk="f3b" name={schedule[day]?.[si]?.f3b || ""} day={day} si={si} members={members} schedule={schedule} timeSlots={timeSlots} active={editCell?.day === day && editCell?.si === si && editCell?.fk === "f3b"} onClick={() => setEditCell({ day, si, fk: "f3b" })} />]),
-                    <ScheduleCell key={`${day}-f4`}  fk="f4"  name={schedule[day]?.[si]?.f4  || ""} day={day} si={si} members={members} schedule={schedule} timeSlots={timeSlots} active={editCell?.day === day && editCell?.si === si && editCell?.fk === "f4"}  onClick={() => setEditCell({ day, si, fk: "f4"  })} />,
+                    <ScheduleCell {...cellProps("f2")} />,
+                    <ScheduleCell {...cellProps("f3a")} />,
+                    <ScheduleCell {...cellProps("f3b")} />,
+                    <ScheduleCell {...cellProps("f4")} />,
                   ];
                 })}
               </tr>

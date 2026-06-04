@@ -153,11 +153,14 @@ export function autoSchedule(members, timeSlots, cfg) {
     const prev = si > 0 ? schedule[day][si - 1][key] : null;
     const prevAvail = prev ? avail.find(m => m.name === prev) : null;
 
-    // 1) 1순위 선호 + 직전 연속 → 2) 1순위 선호(긴 연속블록 우선 패킹)
+    // 1) 1순위 선호층 패킹: 일반 학생 우선, 없을 때만 야간 학생 사용
+    //    cont(직전 연속)는 일반/야간 구분 없이 이미 서 있으면 계속 유지
     const pref1 = avail.filter(m => prefersFloor1(m, key));
     if (pref1.length > 0) {
       const cont = pref1.find(m => m.name === prev);
-      assign((cont || byBlock(pref1, day, si)[0]).name);
+      if (cont) { assign(cont.name); return; }
+      const regularPref1 = pref1.filter(m => !m.isNight);
+      assign(byBlock(regularPref1.length > 0 ? regularPref1 : pref1, day, si)[0].name);
       return;
     }
 
