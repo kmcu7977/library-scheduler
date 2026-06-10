@@ -15,6 +15,7 @@ export default function App() {
   const [cfg, setCfg]             = useState({ ...PRESETS.semester });
   const [members, setMembers]     = useState([]);
   const [schedule, setSchedule]   = useState(null);
+  const [pins, setPins]           = useState({}); // 사서가 고정한 칸 {요일: {si: {층키: 이름}}}
   const [timeSlots, setTimeSlots] = useState(() => buildTimeSlots(PRESETS.semester));
   const [saveStatus, setSaveStatus]       = useState("idle");
   const [loadStatus, setLoadStatus]       = useState("loading");
@@ -35,6 +36,19 @@ export default function App() {
           });
           setSchedule(restored);
         }
+        if (data.pins) {
+          // Firebase는 연속 숫자 키 객체를 배열로 되돌릴 수 있어 정규화
+          const restoredPins = {};
+          DAYS.forEach(day => {
+            const p = data.pins[day];
+            if (!p) return;
+            const entries = Array.isArray(p) ? p.map((v, i) => [i, v]) : Object.entries(p);
+            const dayPins = {};
+            entries.forEach(([si, byFloor]) => { if (byFloor) dayPins[si] = byFloor; });
+            if (Object.keys(dayPins).length) restoredPins[day] = dayPins;
+          });
+          setPins(restoredPins);
+        }
       }
       loadedRef.current = true;
       setLoadStatus("done");
@@ -45,13 +59,13 @@ export default function App() {
     if (!loadedRef.current) return;
     setSaveStatus("saving");
     const t = setTimeout(() => {
-      saveToFirebase({ cfg, members, schedule }).then(ok => {
+      saveToFirebase({ cfg, members, schedule, pins }).then(ok => {
         setSaveStatus(ok ? "saved" : "error");
         setTimeout(() => setSaveStatus("idle"), 2000);
       });
     }, 800);
     return () => clearTimeout(t);
-  }, [cfg, members, schedule]);
+  }, [cfg, members, schedule, pins]);
 
   const handleCfgNext = newCfg => {
     setCfg(newCfg);
@@ -62,7 +76,7 @@ export default function App() {
   const handleGenerate = () => {
     const ts = buildTimeSlots(cfg);
     setTimeSlots(ts);
-    setSchedule(autoSchedule(members, ts, cfg));
+    setSchedule(autoSchedule(members, ts, cfg, pins)); // 고정 칸은 유지하고 나머지만 배치
     setStep(3);
   };
 
@@ -70,10 +84,11 @@ export default function App() {
     setCfg({ ...PRESETS.semester });
     setMembers([]);
     setSchedule(null);
+    setPins({});
     setTimeSlots(buildTimeSlots(PRESETS.semester));
     setStep(0);
     setShowResetConfirm(false);
-    saveToFirebase({ cfg: PRESETS.semester, members: [], schedule: null });
+    saveToFirebase({ cfg: PRESETS.semester, members: [], schedule: null, pins: {} });
   };
 
   const STEP_LABELS = ["운영 설정", "인원 등록", "수업 입력", "시간표"];
@@ -125,6 +140,7 @@ export default function App() {
         {step === 2 && <ClassSetup  members={members} setMembers={setMembers} onNext={handleGenerate} onBack={() => setStep(1)} />}
         {step === 3 && schedule && (
           <ScheduleEditor members={members} schedule={schedule} setSchedule={setSchedule}
+            pins={pins} setPins={setPins} onRegenerate={handleGenerate}
             onExport={() => exportToExcel(schedule, members, timeSlots, cfg)}
             onBack={() => setStep(2)} timeSlots={timeSlots} cfg={cfg} />
         )}

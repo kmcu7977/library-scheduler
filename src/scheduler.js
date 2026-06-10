@@ -1,212 +1,389 @@
+// 시프트 블록 기반 자동배치 v3
+// 구조: 단순 초기해 → 담금질 최적화(모든 정책 = 목적함수 하나) → 마무리 스윕
+//
+// 기준: 사서 선생님 수기 시간표 분석 + 확인된 운영 정책
+//  - 교대는 시프트 경계(개관/12/13/14/17)에서만: M(개관~12) L1(12~13) L2(13~14) B(14~17) E(17~마감)
+//  - 하루 최대 2개 연속 근무 묶음(점심 갭/주간+저녁 분리)
+//  - 야간수업 학생(isNight) = 주간 백본: 자기 선호층 오전·오후, 저녁 근무 안 함
+//  - 그날 수업이 늦게 끝나는 학생도 저녁 회피(soft)
+//  - 2·4층 선호 일반학생은 주 한도까지 거의 채움, 3층/무선호는 잔여 커버
+//  - 주 합계 ≈ 예산(월 900h → 주 ~207h), 부족분은 3층 둘째칸(f3b)
+//  - timeSlot 필드는 제약으로 쓰지 않음(수업시간이 실제 제약)
 import { DAYS, FLOOR_KEYS } from "./constants";
-import { isClassTime, prefersFloor1, prefersFloor2, isLunchSlot } from "./utils";
+import { isClassTime, prefersFloor1 } from "./utils";
 
-export function autoSchedule(members, timeSlots, cfg) {
-  const schedule = {};
-  DAYS.forEach(day => { schedule[day] = timeSlots.map(() => ({ f2: null, f3a: null, f3b: null, f4: null })); });
+// pins: 사서가 고정한 칸 {요일: {슬롯인덱스: {층키: 이름}}} — 재생성 시 그대로 유지
+export function autoSchedule(members, timeSlots, cfg, pins = null) {
+  const N = timeSlots.length;
+  const W = cfg.tuning ?? {};
 
-  const weeklyHours = {}, dailyHours = {};
-  members.forEach(m => {
-    weeklyHours[m.name] = 0;
-    dailyHours[m.name] = {};
-    DAYS.forEach(d => { dailyHours[m.name][d] = 0; });
-  });
-
-  const halfSlotIdx = timeSlots[0]?.hours === 0.5 ? 0 : -1;
-  const lunchIdxs = timeSlots.map((_, i) => i).filter(i => isLunchSlot(timeSlots[i]));
-
-  // 점심 보호: 한 사람이 같은 날 점심 슬롯을 2개 이상 차지하지 않게 해 휴식을 보장.
-  // 점심 슬롯이 2개 이상일 때만 의미가 있으며, 인원이 부족하면 protectLunch=false로 완화한다.
-  const canAssign = (name, day, si, slotH, protectLunch = true) => {
-    const m = members.find(x => x.name === name);
-    if (!m) return false;
-    if (isClassTime(m, day, si, timeSlots)) return false;
-    if (m.timeSlot === "주간" && timeSlots[si].startH >= 17) return false; // 주간 선호 → 저녁 제외
-    const maxW = m.isNight ? (cfg.maxNightWeeklyHours ?? cfg.maxWeeklyHours) : cfg.maxWeeklyHours;
-    if (weeklyHours[name] + slotH > maxW) return false;
-    if (dailyHours[name][day] + slotH > cfg.maxDailyHours) return false;
-    if (protectLunch && lunchIdxs.length >= 2 && lunchIdxs.includes(si)) {
-      const otherLunchTaken = lunchIdxs.some(li =>
-        li !== si && FLOOR_KEYS.some(fk => schedule[day][li][fk] === name));
-      if (otherLunchTaken) return false;
-    }
-    return true;
-  };
-
-  const hasClassOnDay = (name, day) => {
-    const m = members.find(x => x.name === name);
-    return m ? (m.classes || []).some(cls => cls.day === day) : false;
-  };
-
-  // 이 사람이 지금 슬롯부터 연속으로 몇 칸 더 근무 가능한지 (연속 배치 선호용 점수)
-  const countConsecutive = (name, day, startSi) => {
-    let count = 0, wh = weeklyHours[name], dh = dailyHours[name][day];
-    const m = members.find(x => x.name === name);
-    if (!m) return 0;
-    const maxW = m.isNight ? (cfg.maxNightWeeklyHours ?? cfg.maxWeeklyHours) : cfg.maxWeeklyHours;
-    for (let si = startSi; si < timeSlots.length; si++) {
-      if (si === halfSlotIdx) continue;
-      const slotH = timeSlots[si].hours;
-      if (isClassTime(m, day, si, timeSlots)) break;
-      if (m.timeSlot === "주간" && timeSlots[si].startH >= 17) break;
-      if (wh + slotH > maxW || dh + slotH > cfg.maxDailyHours) break;
-      // 다른 층에 이미 배치된 슬롯은 연속 체인을 끊는다 (reachesClose 오판 방지)
-      if (FLOOR_KEYS.some(fk => schedule[day][si][fk] === name)) break;
-      count++; wh += slotH; dh += slotH;
-    }
-    return count;
-  };
-
-  // 잔여 한도 비율 (0~1): 절대값 대신 비율 기준으로 정렬해야 야간 학생이 f2를 독점하지 않음
-  // 예) 탁연주 15/30h=0.5 vs 성창영 15/20h=0.75 → 성창영 우선
-  const remainingRatio = m => {
-    const maxW = m.isNight ? (cfg.maxNightWeeklyHours ?? cfg.maxWeeklyHours) : cfg.maxWeeklyHours;
-    return (maxW - weeklyHours[m.name]) / maxW;
-  };
-
-  // 현재 슬롯 시간대와 선호가 맞으면 +1, 아니면 0 (강제 아닌 soft 우선)
-  const timeBoost = (m, si) => {
-    if (!m.timeSlot) return 0;
+  // ===== 시프트 그리드 =====
+  const shiftOf = (si) => {
     const h = timeSlots[si].startH;
-    if (m.timeSlot === "주간" && h < 13) return 1;
-    if (m.timeSlot === "야간" && h >= 13) return 1;
-    return 0;
+    if (h < 12) return "M";
+    if (h < 13) return "L1";
+    if (h < 14) return "L2";
+    if (h < 17) return "B";
+    return "E";
   };
+  const SHIFTS = {};
+  timeSlots.forEach((s, si) => { (SHIFTS[shiftOf(si)] ||= []).push(si); });
+  const SHIFT_KEYS = ["E", "M", "B", "L1", "L2"].filter((k) => SHIFTS[k]);
 
-  // 일반 학생 우선 → 잔여 비율 → 시간대 선호 → 긴 연속블록 → 주간↑ → 일일↑
-  // 야간 학생(isNight)은 일반 학생이 모두 채운 뒤 남은 슬롯을 채운다
-  const byBlock = (list, day, si) =>
-    [...list].sort((a, b) => {
-      const night = (a.isNight ? 1 : 0) - (b.isNight ? 1 : 0);
-      if (night !== 0) return night;
-      const r = remainingRatio(b) - remainingRatio(a);
-      if (r !== 0) return r;
-      const tb = timeBoost(b, si) - timeBoost(a, si);
-      if (tb !== 0) return tb;
-      const c = countConsecutive(b.name, day, si) - countConsecutive(a.name, day, si);
-      if (c !== 0) return c;
-      const w = weeklyHours[a.name] - weeklyHours[b.name];
-      if (w !== 0) return w;
-      return dailyHours[a.name][day] - dailyHours[b.name][day];
-    });
+  // ===== 상태 =====
+  const schedule = {};
+  DAYS.forEach((d) => { schedule[d] = timeSlots.map(() => ({ f2: null, f3a: null, f3b: null, f4: null })); });
+  const weekly = {}, daily = {};
+  members.forEach((m) => { weekly[m.name] = 0; daily[m.name] = Object.fromEntries(DAYS.map((d) => [d, 0])); });
+  const byName = Object.fromEntries(members.map((m) => [m.name, m]));
 
-  // 17시 이후엔 교대가 없으므로, 저녁 자리는 마감까지 연속 근무 가능한 사람만 후보로 둔다.
-  // si부터 마지막 슬롯까지 끊김 없이 갈 수 있으면 true.
-  const lastIdx = timeSlots.length - 1;
-  const reachesClose = (name, day, si) => si + countConsecutive(name, day, si) > lastIdx;
-
-  // 한 칸(요일·슬롯·층) 배치
-  const fillCell = (key, day, si, slot) => {
-    if (schedule[day][si][key] !== null) return;
-    const slotH = slot.hours;
-    const evening = slot.startH >= 17;
-    const taken = Object.values(schedule[day][si]).filter(Boolean);
-
-    // 선호층 배치 제약:
-    // - 선호층이 설정된 인원은 자기 선호층 우선
-    // - 2층/4층 선호 인원은 해당 슬롯의 자기 층이 이미 채워진 경우에만 3층에 overflow 허용
-    // - 2층↔4층 간 교차 배치는 금지
-    const pref1Blocked = m => {
-      if (!m.preferFloor1) return false;
-      if (prefersFloor1(m, key)) return false;
-      if (key === "f3a" || key === "f3b") {
-        const prefKey = m.preferFloor1 === "2층" ? "f2" : m.preferFloor1 === "4층" ? "f4" : null;
-        if (!prefKey) return true; // pref1=3층 인원은 위에서 이미 처리
-        return schedule[day][si][prefKey] === null; // 자기 층이 빈 경우 3층 차단
-      }
-      return true;
-    };
-
-    let avail = members.filter(m => !taken.includes(m.name) && !pref1Blocked(m) && canAssign(m.name, day, si, slotH, true));
-    if (avail.length === 0) {
-      // 점심 보호를 풀어야만 채울 수 있으면 완화
-      avail = members.filter(m => !taken.includes(m.name) && !pref1Blocked(m) && canAssign(m.name, day, si, slotH, false));
+  const capOf = (m) => (m.isNight ? (cfg.maxNightWeeklyHours ?? cfg.maxWeeklyHours) : cfg.maxWeeklyHours);
+  const hoursOf = (sis) => sis.reduce((a, si) => a + timeSlots[si].hours, 0);
+  const occupiedBy = (day, si, name) => FLOOR_KEYS.some((fk) => schedule[day][si][fk] === name);
+  const personSlots = (day, name) => {
+    const sis = [];
+    for (let si = 0; si < N; si++) if (occupiedBy(day, si, name)) sis.push(si);
+    return sis;
+  };
+  const runCount = (sis) => {
+    let runs = 0;
+    for (let i = 0; i < sis.length; i++) if (i === 0 || sis[i] !== sis[i - 1] + 1) runs++;
+    return runs;
+  };
+  const canTake = (m, day, sis, { maxRuns = 2 } = {}) => {
+    const h = hoursOf(sis);
+    if (weekly[m.name] + h > capOf(m) + 1e-9) return false;
+    if (daily[m.name][day] + h > cfg.maxDailyHours + 1e-9) return false;
+    for (const si of sis) {
+      if (isClassTime(m, day, si, timeSlots)) return false;
+      if (occupiedBy(day, si, m.name)) return false;
     }
-    if (avail.length === 0) return;
-
-    // 저녁(17시 이후): 마감까지 갈 수 있는 사람이 있으면 그 사람들로만 후보를 좁힌다.
-    // → 17시에 들어간 사람이 마감까지 근무(중간 교대 없음). 없으면 부득이 전체에서 채움.
-    if (evening) {
-      const closers = avail.filter(m => reachesClose(m.name, day, si));
-      if (closers.length > 0) avail = closers;
+    return runCount([...new Set([...personSlots(day, m.name), ...sis])].sort((a, b) => a - b)) <= maxRuns;
+  };
+  const place = (name, day, fl, sis) => {
+    for (const si of sis) {
+      schedule[day][si][fl] = name;
+      weekly[name] += timeSlots[si].hours;
+      daily[name][day] += timeSlots[si].hours;
     }
+  };
+  const unassign = (name, day, fl, sis) => {
+    for (const si of sis) {
+      schedule[day][si][fl] = null;
+      weekly[name] -= timeSlots[si].hours;
+      daily[name][day] -= timeSlots[si].hours;
+    }
+  };
+  // 2층 선호자는 4층 금지, 4층 선호자는 2층 금지 (3층은 누구나)
+  const floorOk = (m, fl) => {
+    if (fl === "f3a" || fl === "f3b") return true;
+    return m.preferFloor1 !== (fl === "f2" ? "4층" : "2층");
+  };
+  const prefFloorKey = (m) => (m.preferFloor1 === "2층" ? "f2" : m.preferFloor1 === "4층" ? "f4" : null);
 
-    const assign = name => {
-      schedule[day][si][key] = name;
-      weeklyHours[name] += slotH;
-      dailyHours[name][day] += slotH;
-      // 0.5h 첫 슬롯 미러: si=1 배치 시점에 즉시 si=0도 같은 사람으로 채움
-      // (맨 마지막에 복사하면 한도가 차 있어 누락되므로 배치 직후 처리)
-      if (halfSlotIdx === 0 && si === 1 && schedule[day][0][key] === null) {
-        const h0 = timeSlots[0].hours;
-        const m0 = members.find(x => x.name === name);
-        const maxW0 = m0?.isNight ? (cfg.maxNightWeeklyHours ?? cfg.maxWeeklyHours) : cfg.maxWeeklyHours;
-        if (m0 && !isClassTime(m0, day, 0, timeSlots) && !FLOOR_KEYS.some(fk => schedule[day][0][fk] === name)
-            && weeklyHours[name] + h0 <= maxW0 && dailyHours[name][day] + h0 <= cfg.maxDailyHours) {
-          schedule[day][0][key] = name;
-          weeklyHours[name] += h0;
-          dailyHours[name][day] += h0;
+  // ===== 고정 칸 선배치: 알고리즘이 절대 건드리지 않음 (한도보다 사서 결정 우선) =====
+  const pinnedSet = new Set(); // "요일|si|층키"
+  if (pins) {
+    for (const day of DAYS) {
+      for (const [siStr, byFloor] of Object.entries(pins[day] ?? {})) {
+        const si = Number(siStr);
+        if (!(si >= 0 && si < N)) continue;
+        for (const [fl, name] of Object.entries(byFloor ?? {})) {
+          if (!FLOOR_KEYS.includes(fl) || !byName[name] || schedule[day][si][fl] !== null) continue;
+          place(name, day, fl, [si]);
+          pinnedSet.add(`${day}|${si}|${fl}`);
         }
       }
-    };
-
-    const prev = si > 0 ? schedule[day][si - 1][key] : null;
-    const prevAvail = prev ? avail.find(m => m.name === prev) : null;
-
-    // 1) 1순위 선호층 패킹: 야간 학생이 해당 층의 주 담당 → 야간 먼저, 없을 때 일반 사용
-    //    cont(직전 연속)는 야간/일반 구분 없이 이미 서 있으면 계속 유지
-    const pref1 = avail.filter(m => prefersFloor1(m, key));
-    if (pref1.length > 0) {
-      const cont = pref1.find(m => m.name === prev);
-      if (cont) { assign(cont.name); return; }
-      const nightPref1 = pref1.filter(m => m.isNight);
-      assign(byBlock(nightPref1.length > 0 ? nightPref1 : pref1, day, si)[0].name);
-      return;
     }
+  }
+  const isPinned = (day, si, fl) => pinnedSet.has(`${day}|${si}|${fl}`);
 
-    // 저녁 슬롯은 2순위 선호 인원으로 채움 (3) 직전 연속 → 4) 긴 연속블록 우선)
-    if (evening) {
-      const pref2 = avail.filter(m => prefersFloor2(m, key));
-      if (pref2.length > 0) {
-        const cont = pref2.find(m => m.name === prev);
-        assign((cont || byBlock(pref2, day, si)[0]).name);
+  // 요일별 마지막 수업 종료 시각 (저녁 회피 판단용)
+  const lastClassEnd = {};
+  for (const m of members) {
+    lastClassEnd[m.name] = {};
+    for (const d of DAYS) {
+      let end = -1;
+      for (const c of m.classes || []) if (c.day === d) end = Math.max(end, c.endHour + c.endMin / 60);
+      lastClassEnd[m.name][d] = end;
+    }
+  }
+  const hasClassOnDay = (m, day) => lastClassEnd[m.name][day] >= 0;
+
+  // ===== 목적함수 (정책 전부 여기) =====
+  const OBJ = {
+    w24: W.w24 ?? 2.0,                 // 2·4층 선호 일반: 한도까지 채움
+    wNight: W.wNight ?? 1.8,           // 야간 백본
+    w3: W.w3 ?? 1.0,                   // 3층 선호/무선호
+    concave: W.objConcave ?? 0.009,    // 한계효용 체감 (몰아주기 방지)
+    prefHour: W.objPrefHour ?? 0.3,    // 선호층(무선호=3층) 근무 시간당 보너스
+    nightEveHour: W.objNightEveHour ?? 3,    // 야간생 저녁 시간당 패널티
+    lateClassEveHour: W.objLateClassEveHour ?? 1, // 그날 수업 16시 이후 종료자의 저녁 시간당 패널티
+    classDayHour: W.objClassDayHour ?? 0.25, // 그날 수업 있는 일반학생 주간 시간당 보너스
+    runPenalty: W.objRunPenalty ?? 0.6,      // 하루 묶음 추가당 패널티
+    shortRun: W.objShortRun ?? 0.3,          // 점심 외 1슬롯 고립 묶음 패널티
+    budgetMiss: W.objBudgetMiss ?? 1.5,      // 주 예산 편차 시간당 패널티
+    maxEveNights: W.objMaxEveNights ?? 3,    // 주당 저녁 일수 상한
+    eveOver: W.objEveOver ?? 0.8,
+    backboneB: W.objBackboneB ?? 1.5,        // 야간 백본이 자기층 오후(B) 사수 시 보너스/일
+    backboneM: W.objBackboneM ?? 1.2,        // 야간 백본이 자기층 오전(M) 사수 시 보너스/일
+  };
+  const typeWeight = (m) =>
+    m.isNight ? OBJ.wNight : (m.preferFloor1 === "2층" || m.preferFloor1 === "4층") ? OBJ.w24 : OBJ.w3;
+
+  const budget = cfg.weeklyBudgetHours ?? Math.round(((cfg.monthlyBudgetHours ?? 900) / 4.345) * 2) / 2;
+  const totalHours = () => Object.values(weekly).reduce((a, b) => a + b, 0);
+
+  const objective = () => {
+    let J = 0;
+    for (const m of members) {
+      const h = weekly[m.name];
+      J += typeWeight(m) * (h - OBJ.concave * h * h);
+    }
+    const eveNights = {};
+    for (const day of DAYS) {
+      const slotsOf = {};
+      for (let si = 0; si < N; si++) {
+        for (const fl of FLOOR_KEYS) {
+          const n = schedule[day][si][fl];
+          if (!n) continue;
+          (slotsOf[n] ||= []).push(si);
+          const m = byName[n], h = timeSlots[si].hours, sk = shiftOf(si);
+          if (prefersFloor1(m, fl) || (!m.preferFloor1 && (fl === "f3a" || fl === "f3b"))) J += OBJ.prefHour * h;
+          if (sk === "E") {
+            (eveNights[n] ||= new Set()).add(day);
+            if (m.isNight) J -= OBJ.nightEveHour * h;
+            else if (lastClassEnd[n][day] >= 16) J -= OBJ.lateClassEveHour * h;
+          } else if (!m.isNight && hasClassOnDay(m, day)) J += OBJ.classDayHour * h;
+        }
+      }
+      for (const sis of Object.values(slotsOf)) {
+        const u = [...new Set(sis)].sort((a, b) => a - b);
+        J -= OBJ.runPenalty * (runCount(u) - 1);
+        for (let i = 0; i < u.length; i++) {
+          const lone = (i === 0 || u[i] !== u[i - 1] + 1) && (i === u.length - 1 || u[i + 1] !== u[i] + 1);
+          if (lone && !["L1", "L2"].includes(shiftOf(u[i]))) J -= OBJ.shortRun;
+        }
+      }
+    }
+    for (const s of Object.values(eveNights)) J -= OBJ.eveOver * Math.max(0, s.size - OBJ.maxEveNights);
+    for (const m of members) {
+      const fl = m.isNight ? prefFloorKey(m) : null;
+      if (!fl) continue;
+      for (const day of DAYS) {
+        if ((SHIFTS.B ?? []).every((si) => schedule[day][si][fl] === m.name)) J += OBJ.backboneB;
+        if ((SHIFTS.M ?? []).every((si) => schedule[day][si][fl] === m.name)) J += OBJ.backboneM;
+      }
+    }
+    J -= OBJ.budgetMiss * Math.abs(totalHours() - budget);
+    return J;
+  };
+
+  // ===== 초기해: 단순 우선순위로 빈칸 없이 깔기 =====
+  const REQUIRED = ["f2", "f4", "f3a"];
+  const seedSort = (cands, fl, sk) =>
+    cands.sort((a, b) => {
+      const ev = sk === "E";
+      const key = (m) =>
+        (ev && m.isNight ? -10 : 0) +                      // 야간생 저녁 최후순위
+        (prefersFloor1(m, fl) ? 4 : 0) +
+        (!m.preferFloor1 && (fl === "f3a" || fl === "f3b") ? 2 : 0) +
+        (m.isNight && !ev ? 3 : 0) +                       // 야간생 주간 우선
+        (capOf(m) - weekly[m.name]) / capOf(m);
+      return key(b) - key(a) || a.name.localeCompare(b.name, "ko");
+    });
+  const coverRange = (day, fl, sis, sk) => {
+    if (!sis.length) return;
+    for (let len = sis.length; len >= 1; len--) {
+      const part = sis.slice(0, len);
+      const cands = seedSort(members.filter((m) => floorOk(m, fl) && canTake(m, day, part)), fl, sk);
+      if (cands.length) {
+        place(cands[0].name, day, fl, part);
+        coverRange(day, fl, sis.slice(len), sk);
         return;
       }
     }
+    coverRange(day, fl, sis.slice(1), sk); // 첫 칸 포기(최종 보수에서 재시도)
+  };
+  for (const sk of SHIFT_KEYS) for (const day of DAYS) for (const fl of REQUIRED) {
+    coverRange(day, fl, (SHIFTS[sk] || []).filter((si) => schedule[day][si][fl] === null), sk);
+  }
 
-    // 5) 직전 슬롯과 동일인 연속
-    if (prevAvail) { assign(prev); return; }
+  // ===== f3b 예산 채움 (2h 이상 또는 시프트 전체 블록) =====
+  const f3bBlocks = (m) => {
+    const blocks = [];
+    for (const day of DAYS) for (const sk of SHIFT_KEYS) {
+      let run = [];
+      for (const si of SHIFTS[sk]) {
+        const free = schedule[day][si].f3b === null && !isClassTime(m, day, si, timeSlots) && !occupiedBy(day, si, m.name);
+        if (free) run.push(si);
+        else { if (run.length) blocks.push({ day, sk, sis: run }); run = []; }
+      }
+      if (run.length) blocks.push({ day, sk, sis: run });
+    }
+    return blocks.filter((b) => canTake(m, b.day, b.sis) && (hoursOf(b.sis) >= 2 || b.sis.length === SHIFTS[b.sk].length));
+  };
+  const fillBudget = () => {
+    for (let guard = 0; guard < 100 && totalHours() + 0.5 <= budget; guard++) {
+      let best = null;
+      for (const m of members) {
+        for (const b of f3bBlocks(m)) {
+          place(m.name, b.day, "f3b", b.sis);
+          const J = objective();
+          unassign(m.name, b.day, "f3b", b.sis);
+          if (!best || J > best.J) best = { m, b, J };
+        }
+      }
+      if (!best) break;
+      place(best.m.name, best.b.day, "f3b", best.b.sis);
+    }
+  };
+  fillBudget();
 
-    // 5-2) 다음 슬롯에 이미 배치된 사람(저녁 먼저 배치 등)으로 이어붙임 → 이음새 단일셀 방지
-    const next = si < timeSlots.length - 1 ? schedule[day][si + 1][key] : null;
-    const nextAvail = next ? avail.find(m => m.name === next) : null;
-    if (nextAvail) { assign(next); return; }
-
-    // 6) 오늘 수업 있는 사람 우선(가용 시간이 한정적이므로 먼저 소진, 긴 블록 우선)
-    const classToday = avail.filter(m => hasClassOnDay(m.name, day));
-    if (classToday.length > 0) { assign(byBlock(classToday, day, si)[0].name); return; }
-
-    // 7) 긴 연속블록 우선(균형은 byBlock 2차 기준 주간시간으로 반영)
-    assign(byBlock(avail, day, si)[0].name);
+  // ===== 담금질 최적화: 교체/스왑/f3b 제거 (멀티 리스타트) =====
+  let seed = 20260610;
+  const rng = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+  const listUnits = () => {
+    const units = [];
+    for (const day of DAYS) for (const fl of FLOOR_KEYS) for (const sk of SHIFT_KEYS) {
+      let cur = null;
+      for (const si of SHIFTS[sk]) {
+        const n = isPinned(day, si, fl) ? null : schedule[day][si][fl]; // 고정 칸은 이동 대상 제외
+        if (n && cur && cur.owner === n) cur.sis.push(si);
+        else {
+          if (cur) units.push(cur);
+          cur = n ? { day, fl, sk, owner: n, sis: [si] } : null;
+        }
+      }
+      if (cur) units.push(cur);
+    }
+    return units;
+  };
+  const snapshot = () => JSON.stringify(schedule);
+  const restore = (snap) => {
+    const s = JSON.parse(snap);
+    for (const day of DAYS) for (let si = 0; si < N; si++) for (const fl of FLOOR_KEYS) schedule[day][si][fl] = s[day][si][fl];
+    members.forEach((m) => { weekly[m.name] = 0; DAYS.forEach((d) => { daily[m.name][d] = 0; }); });
+    for (const day of DAYS) for (let si = 0; si < N; si++) for (const fl of FLOOR_KEYS) {
+      const n = schedule[day][si][fl];
+      if (n) { weekly[n] += timeSlots[si].hours; daily[n][day] += timeSlots[si].hours; }
+    }
   };
 
-  // 슬롯 우선 × 요일 균등 패스(층별). slotFilter로 저녁/주간 단계를 분리한다.
-  const assignFloor = (key, slotFilter) => {
-    timeSlots.forEach((slot, si) => {
-      if (si === halfSlotIdx) return;       // 0.5h 첫 슬롯은 si=1 배치 시 미러로 채움
-      if (!slotFilter(slot)) return;
-      DAYS.forEach(day => fillCell(key, day, si, slot));
-    });
-  };
+  const RESTARTS = W.optRestarts ?? 5;
+  const ITER = W.optIterations ?? 15000;
+  const initSnap = snapshot();
+  let globalBestJ = -Infinity, globalBestSnap = initSnap;
+  for (let restart = 0; restart < RESTARTS; restart++) {
+    restore(initSnap);
+    seed = 20260610 + restart * 7919;
+    let curJ = objective(), bestJ = curJ, bestSnap = snapshot();
+    for (let it = 0; it < ITER; it++) {
+      const T = 0.4 * (1 - it / ITER) + 0.02; // 담금질 온도
+      const accept = (newJ) => newJ > curJ + 1e-9 || rng() < Math.exp((newJ - curJ) / T);
+      const units = listUnits();
+      const u = units[Math.floor(rng() * units.length)];
+      if (!u) break;
+      const r = rng();
 
-  const isEvening = s => s.startH >= 17;
-  const isDaytime = s => s.startH < 17;
-  const FLOORS = ["f2", "f4", "f3a", "f3b"];   // f3b는 3층 둘째칸(overflow 잔여)
+      if (r < 0.35) {
+        // 스왑: 두 블록 주인 맞교환
+        const u2 = units[Math.floor(rng() * units.length)];
+        if (!u2 || u2.owner === u.owner) continue;
+        const m1 = byName[u.owner], m2 = byName[u2.owner];
+        if (!floorOk(m2, u.fl) || !floorOk(m1, u2.fl)) continue;
+        unassign(u.owner, u.day, u.fl, u.sis);
+        unassign(u2.owner, u2.day, u2.fl, u2.sis);
+        let ok = false;
+        if (canTake(m2, u.day, u.sis)) {
+          place(m2.name, u.day, u.fl, u.sis);
+          if (canTake(m1, u2.day, u2.sis)) {
+            place(m1.name, u2.day, u2.fl, u2.sis);
+            const newJ = objective();
+            if (accept(newJ)) { curJ = newJ; ok = true; }
+            else { unassign(m1.name, u2.day, u2.fl, u2.sis); unassign(m2.name, u.day, u.fl, u.sis); }
+          } else unassign(m2.name, u.day, u.fl, u.sis);
+        }
+        if (!ok) { place(u.owner, u.day, u.fl, u.sis); place(u2.owner, u2.day, u2.fl, u2.sis); }
+      } else if (r < 0.9 || u.fl !== "f3b") {
+        // 교체: 블록을 다른 사람에게
+        const cands = members.filter((m) => m.name !== u.owner && floorOk(m, u.fl));
+        const repl = cands[Math.floor(rng() * cands.length)];
+        if (!repl) continue;
+        unassign(u.owner, u.day, u.fl, u.sis);
+        if (canTake(repl, u.day, u.sis)) {
+          place(repl.name, u.day, u.fl, u.sis);
+          const newJ = objective();
+          if (accept(newJ)) curJ = newJ;
+          else { unassign(repl.name, u.day, u.fl, u.sis); place(u.owner, u.day, u.fl, u.sis); }
+        } else place(u.owner, u.day, u.fl, u.sis);
+      } else {
+        // f3b 블록 제거
+        unassign(u.owner, u.day, u.fl, u.sis);
+        const newJ = objective();
+        if (accept(newJ)) curJ = newJ;
+        else place(u.owner, u.day, u.fl, u.sis);
+      }
 
-  // 저녁(17시~마감)은 교대 없이 연속이어야 하고 주 후반에 주간시간이 부족해지므로
-  // 모든 층·요일의 저녁을 먼저 배치해 주간시간을 선점한다. 그 다음 주간을 채운다.
-  FLOORS.forEach(k => assignFloor(k, isEvening));
-  FLOORS.forEach(k => assignFloor(k, isDaytime));
+      if (curJ > bestJ + 1e-9) { bestJ = curJ; bestSnap = snapshot(); }
+    }
+    restore(bestSnap);
+    fillBudget(); // 최적화 중 빠진 예산 재보충
+
+    // ── 결정적 마무리 스윕: 모든 블록 쌍 스왑/전원 교체를 개선 없을 때까지 ──
+    curJ = objective();
+    for (let sweep = 0; sweep < 6; sweep++) {
+      let improved = false;
+      const units = listUnits();
+      for (const u of units) {
+        // 교체 시도
+        for (const repl of members) {
+          if (repl.name === u.owner || !floorOk(repl, u.fl)) continue;
+          if (schedule[u.day][u.sis[0]][u.fl] !== u.owner) break; // 이미 바뀐 블록
+          unassign(u.owner, u.day, u.fl, u.sis);
+          if (canTake(repl, u.day, u.sis)) {
+            place(repl.name, u.day, u.fl, u.sis);
+            const J = objective();
+            if (J > curJ + 1e-9) { curJ = J; improved = true; break; }
+            unassign(repl.name, u.day, u.fl, u.sis);
+          }
+          place(u.owner, u.day, u.fl, u.sis);
+        }
+        // 스왑 시도
+        for (const u2 of units) {
+          if (u2 === u || u2.owner === u.owner) continue;
+          if (schedule[u.day][u.sis[0]][u.fl] !== u.owner || schedule[u2.day][u2.sis[0]][u2.fl] !== u2.owner) continue;
+          const m1 = byName[u.owner], m2 = byName[u2.owner];
+          if (!floorOk(m2, u.fl) || !floorOk(m1, u2.fl)) continue;
+          unassign(u.owner, u.day, u.fl, u.sis);
+          unassign(u2.owner, u2.day, u2.fl, u2.sis);
+          let done = false;
+          if (canTake(m2, u.day, u.sis)) {
+            place(m2.name, u.day, u.fl, u.sis);
+            if (canTake(m1, u2.day, u2.sis)) {
+              place(m1.name, u2.day, u2.fl, u2.sis);
+              const J = objective();
+              if (J > curJ + 1e-9) { curJ = J; improved = true; done = true; }
+              else { unassign(m1.name, u2.day, u2.fl, u2.sis); unassign(m2.name, u.day, u.fl, u.sis); }
+            } else unassign(m2.name, u.day, u.fl, u.sis);
+          }
+          if (!done) { place(u.owner, u.day, u.fl, u.sis); place(u2.owner, u2.day, u2.fl, u2.sis); }
+        }
+      }
+      if (!improved) break;
+    }
+
+    if (curJ > globalBestJ + 1e-9) { globalBestJ = curJ; globalBestSnap = snapshot(); }
+  }
+  restore(globalBestSnap);
+  fillBudget();
+
+  // ===== 최종 보수: 필수칸 빈 곳은 묶음 제한 완화해서라도 채움 =====
+  for (const day of DAYS) for (let si = 0; si < N; si++) for (const fl of REQUIRED) {
+    if (schedule[day][si][fl] !== null) continue;
+    const cands = seedSort(members.filter((m) => floorOk(m, fl) && canTake(m, day, [si], { maxRuns: 9 })), fl, shiftOf(si));
+    if (cands.length) place(cands[0].name, day, fl, [si]);
+  }
 
   return schedule;
 }

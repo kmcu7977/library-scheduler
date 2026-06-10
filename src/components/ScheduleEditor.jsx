@@ -3,9 +3,38 @@ import { DAYS, FLOOR_KEYS, FLOOR_LABEL } from "../constants";
 import { isClassTime } from "../utils";
 import ScheduleCell from "./ScheduleCell";
 
-export default function ScheduleEditor({ members, schedule, setSchedule, onExport, onBack, timeSlots, cfg }) {
+export default function ScheduleEditor({ members, schedule, setSchedule, pins, setPins, onRegenerate, onExport, onBack, timeSlots, cfg }) {
   const [editCell, setEditCell] = useState(null);
   const [hoveredMember, setHoveredMember] = useState(null);
+  const [regenerating, setRegenerating] = useState(false);
+
+  const isPinned = (day, si, fk) => !!pins?.[day]?.[si]?.[fk];
+  const pinCount = useMemo(
+    () => Object.values(pins || {}).reduce((a, d) => a + Object.values(d).reduce((b, r) => b + Object.keys(r).length, 0), 0),
+    [pins]
+  );
+
+  // 칸 고정 추가/해제 (name이 null이면 해제)
+  const setPin = (day, si, fk, name) => {
+    setPins(prev => {
+      const next = { ...(prev || {}), [day]: { ...(prev?.[day] || {}) } };
+      const row = { ...(next[day][si] || {}) };
+      if (name) row[fk] = name;
+      else delete row[fk];
+      if (Object.keys(row).length) next[day][si] = row;
+      else {
+        delete next[day][si];
+        if (!Object.keys(next[day]).length) delete next[day];
+      }
+      return next;
+    });
+  };
+
+  const handleRegenerate = () => {
+    setRegenerating(true);
+    // 렌더가 "재배치 중..."을 먼저 그리도록 한 틱 미룸 (생성은 1~3초 소요)
+    setTimeout(() => { onRegenerate(); setRegenerating(false); }, 30);
+  };
 
   const weeklyMap = useMemo(() => {
     const map = {};
@@ -36,10 +65,19 @@ export default function ScheduleEditor({ members, schedule, setSchedule, onExpor
     return map;
   }, [members, schedule, timeSlots]);
 
+  // 수동 배치 = 자동 고정 (재생성해도 유지), 비우기 = 고정 해제 + 칸 비움
   const assignMember = name => {
     if (!editCell) return;
     const { day, si, fk } = editCell;
     setSchedule(prev => ({ ...prev, [day]: prev[day].map((row, i) => i !== si ? row : { ...row, [fk]: name || null }) }));
+    setPin(day, si, fk, name || null);
+    setEditCell(null);
+  };
+
+  // 이름은 그대로 두고 고정만 해제 (재생성 시 자동배치 대상이 됨)
+  const unpinCell = () => {
+    if (!editCell) return;
+    setPin(editCell.day, editCell.si, editCell.fk, null);
     setEditCell(null);
   };
 
@@ -103,6 +141,7 @@ export default function ScheduleEditor({ members, schedule, setSchedule, onExpor
                     key: `${day}-${fk}`,
                     fk, day, si, members, schedule, timeSlots,
                     name: schedule[day]?.[si]?.[fk] || "",
+                    pinned: isPinned(day, si, fk),
                     active: editCell?.day === day && editCell?.si === si && editCell?.fk === fk,
                     onClick: () => setEditCell({ day, si, fk }),
                     onHoverMember: setHoveredMember,
@@ -128,6 +167,9 @@ export default function ScheduleEditor({ members, schedule, setSchedule, onExpor
             <p className="popup-title">
               {editCell.day}요일 {timeSlots[editCell.si].label.split("\n")[0]}<br />
               <span style={{ color: "#1976d2" }}>{FLOOR_LABEL[editCell.fk]}</span> 담당자 변경
+              <span style={{ display: "block", fontSize: 11, color: "#90a4ae", marginTop: 4 }}>
+                직접 지정한 칸은 📌 고정되어 재배치해도 유지됩니다
+              </span>
             </p>
             <div className="popup-members">
               {members.map(m => {
@@ -141,12 +183,25 @@ export default function ScheduleEditor({ members, schedule, setSchedule, onExpor
                 );
               })}
               <button className="popup-member-btn clear-btn" onClick={() => assignMember(null)}>비우기</button>
+              {isPinned(editCell.day, editCell.si, editCell.fk) && (
+                <button className="popup-member-btn clear-btn" style={{ color: "#f57f17", borderColor: "#f9a825" }} onClick={unpinCell}>
+                  📌 고정 해제
+                </button>
+              )}
             </div>
           </div>
         </div>
       )}
       <div className="nav-row">
         <button className="btn-back" onClick={onBack}>← 뒤로</button>
+        <button className="btn-back" style={{ background: "#1976d2", color: "#fff", borderColor: "#1976d2" }}
+          onClick={handleRegenerate} disabled={regenerating}>
+          {regenerating ? "⏳ 재배치 중..." : `🔄 재배치${pinCount > 0 ? ` (📌${pinCount}칸 유지)` : ""}`}
+        </button>
+        {pinCount > 0 && (
+          <button className="btn-back" style={{ color: "#f57f17", borderColor: "#f9a825" }}
+            onClick={() => setPins({})}>📌 전체 고정 해제</button>
+        )}
         <button className="btn-export" onClick={onExport}>📥 엑셀 다운로드</button>
       </div>
     </div>
