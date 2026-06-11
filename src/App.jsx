@@ -80,6 +80,14 @@ export default function App() {
     setStep(3);
   };
 
+  const handleRegenerate = () => {
+    const ts = buildTimeSlots(cfg);
+    setTimeSlots(ts);
+    // 기존 시간표를 앵커로 전달 → 고정 칸을 지키느라 바뀌어야 하는 칸만 바뀜
+    setSchedule(autoSchedule(members, ts, cfg, pins, schedule));
+    setStep(3);
+  };
+
   const handleReset = () => {
     setCfg({ ...PRESETS.semester });
     setMembers([]);
@@ -140,7 +148,7 @@ export default function App() {
         {step === 2 && <ClassSetup  members={members} setMembers={setMembers} onNext={handleGenerate} onBack={() => setStep(1)} />}
         {step === 3 && schedule && (
           <ScheduleEditor members={members} schedule={schedule} setSchedule={setSchedule}
-            pins={pins} setPins={setPins} onRegenerate={handleGenerate}
+            pins={pins} setPins={setPins} onRegenerate={handleRegenerate}
             onExport={() => exportToExcel(schedule, members, timeSlots, cfg)}
             onBack={() => setStep(2)} timeSlots={timeSlots} cfg={cfg} />
         )}
