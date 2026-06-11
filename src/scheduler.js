@@ -168,28 +168,28 @@ export function autoSchedule(members, timeSlots, cfg, pins = null, prev = null) 
     w24: W.w24 ?? 1.7,                 // 2·4층 선호 일반: 한도까지 채움
     wNight: W.wNight ?? 2.0,           // 야간 백본 (2층 주담당이 자기 층을 더 채우도록)
     w3: W.w3 ?? 1.0,                   // 3층 선호/무선호
-    concave: W.objConcave ?? 0.009,    // 한계효용 체감 (몰아주기 방지)
+    concave: W.objConcave ?? 0.005,    // 한계효용 체감 (몰아주기 방지)
     prefHour: W.objPrefHour ?? 0.3,    // 1순위 선호층(무선호=3층) 근무 시간당 보너스
     pref2Hour: W.objPref2Hour ?? 0.05, // 2순위 선호층 근무 시간당 보너스 (약한 타이브레이커 — 세게 주면 사진과 오히려 멀어짐)
     nightEveHour: W.objNightEveHour ?? 3,    // 야간생 저녁 시간당 패널티
     lateClassEveHour: W.objLateClassEveHour ?? 1, // 그날 수업 16시 이후 종료자의 저녁 시간당 패널티
-    classDayHour: W.objClassDayHour ?? 0.25, // 그날 수업 있는 일반학생 주간 시간당 보너스
-    runPenalty: W.objRunPenalty ?? 0.6,      // 하루 묶음 추가당 패널티
+    classDayHour: W.objClassDayHour ?? 0.092, // 그날 수업 있는 일반학생 주간 시간당 보너스
+    runPenalty: W.objRunPenalty ?? 0.681,      // 하루 묶음 추가당 패널티
     shortRun: W.objShortRun ?? 0.3,          // 점심 외 1슬롯 고립 묶음 패널티
-    budgetMiss: W.objBudgetMiss ?? 1.5,      // 주 예산 편차 시간당 패널티
+    budgetMiss: W.objBudgetMiss ?? 1.151,      // 주 예산 편차 시간당 패널티
     maxEveNights: W.objMaxEveNights ?? 3,    // 주당 저녁 일수 상한
     eveOver: W.objEveOver ?? 0.8,
     backboneB: W.objBackboneB ?? 1.5,        // 야간 백본이 자기층 오후(B) 사수 시 보너스/일
-    backboneM: W.objBackboneM ?? 1.2,        // 야간 백본이 자기층 오전(M) 사수 시 보너스/일
+    backboneM: W.objBackboneM ?? 1.435,        // 야간 백본이 자기층 오전(M) 사수 시 보너스/일
     stability: W.objStability ?? 0.05,       // prev와 같은 칸 유지 시간당 보너스 (동급 해 셔플 방지 타이브레이커)
-    dayCost: W.objDayCost ?? 0.3,            // 출근일당 고정 패널티 (출근 일수 최소화, 몰아주기)
+    dayCost: W.objDayCost ?? 0.253,            // 출근일당 고정 패널티 (출근 일수 최소화, 몰아주기)
     farClass: W.objFarClass ?? 1.5,          // 수업일 주간 묶음이 수업과 안 붙어 있으면 시간당 패널티
     adjGap: W.objAdjGap ?? 2,                // 수업 인접 판정 허용 gap (h)
     freeDayMin: W.objFreeDayMin ?? 4,        // 수업 없는 날 출근 시 최소 근무시간
     freeShort: W.objFreeShort ?? 0,          // 그 미달분 시간당 패널티 (기본 off: 사진 일치엔 역효과, 필요 시 튜닝)
     noLunch: W.objNoLunch ?? 1.0,            // 근무 탓에 11~15시에 1h 식사 공백이 사라진 사람-일당 패널티
     eveAdj: W.objEveAdj ?? 1.0,              // 그날 수업이 늦은 오후(eveAdjFrom~17시)에 끝나는 사람의 저녁 근무 시간당 보너스
-    eveAdjFrom: W.objEveAdjFrom ?? 15,
+    eveAdjFrom: W.objEveAdjFrom ?? 15.432,
   };
   const typeWeight = (m) =>
     m.isNight ? OBJ.wNight : (m.preferFloor1 === "2층" || m.preferFloor1 === "4층") ? OBJ.w24 : OBJ.w3;
