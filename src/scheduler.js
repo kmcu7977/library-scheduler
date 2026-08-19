@@ -4,14 +4,14 @@
 // 기준: 사서 선생님 수기 시간표 분석 + 확인된 운영 정책
 //  - 교대는 시프트 경계(개관/12/13/14/17)에서만: M(개관~12) L1(12~13) L2(13~14) B(14~17) E(17~마감)
 //  - 하루 최대 2개 연속 근무 묶음(점심 갭/주간+저녁 분리)
-//  - 야간수업 학생(isNight) = 주간 백본: 자기 선호층 오전·오후, 저녁 근무 안 함
+//  - 장시간 근로자(주 40h 등, 남들보다 한도가 큰 사람) = 주간 백본: 자기 선호층 오전·오후를 사수
 //  - 수업이 늦은 오후(15~17시)에 끝나는 날은 이어서 저녁 근무 선호(등교 1회), 17시 넘겨 끝나면 회피
 //  - 2·4층 선호 일반학생은 주 한도까지 거의 채움, 3층/무선호는 잔여 커버
 //  - 주 합계 ≈ 예산(월 900h → 주 ~207h), 부족분은 3층 둘째칸(f3b)
-//  - timeSlot 필드는 제약으로 쓰지 않음(수업시간이 실제 제약)
+//  - "저녁에 못 나옴"을 따로 표시하지 않는다 — 야간 수업이 있으면 수업시간표가 하드 제약으로 막아준다
 //  - 수업일 주간 근무는 수업과 한 덩어리로(인접 gap≤2h), 출근 일수는 적게·길게
 import { DAYS, FLOOR_KEYS } from "./constants";
-import { isClassTime, prefersFloor1, prefersFloor2 } from "./utils";
+import { isClassTime, prefersFloor1, prefersFloor2, floorAllowed } from "./utils";
 
 // pins: 사서가 고정한 칸 {요일: {슬롯인덱스: {층키: 이름}}} — 재생성 시 그대로 유지
 // prev: 직전 시간표 — 주어지면 제약이 허용하는 한 기존 배치를 유지(재배치 시 판 전체가 섞이는 것 방지)
@@ -39,7 +39,11 @@ export function autoSchedule(members, timeSlots, cfg, pins = null, prev = null) 
   members.forEach((m) => { weekly[m.name] = 0; daily[m.name] = Object.fromEntries(DAYS.map((d) => [d, 0])); });
   const byName = Object.fromEntries(members.map((m) => [m.name, m]));
 
-  const capOf = (m) => (m.isNight ? (cfg.maxNightWeeklyHours ?? cfg.maxWeeklyHours) : cfg.maxWeeklyHours);
+  // 근로 유형 = 주당 근무시간. 저녁에 못 나오는 사정은 수업시간표가 하드 제약으로 이미 막는다
+  const capOf = (m) => m.weeklyHours ?? cfg.maxWeeklyHours;
+  // 남들보다 오래 일하는 사람 = 도서관 상주 인력(백본). 전원이 같은 시간이면 백본은 없다
+  const baseCap = members.length ? Math.min(...members.map(capOf)) : 0;
+  const isLong = (m) => capOf(m) > baseCap;
   const hoursOf = (sis) => sis.reduce((a, si) => a + timeSlots[si].hours, 0);
   const occupiedBy = (day, si, name) => FLOOR_KEYS.some((fk) => schedule[day][si][fk] === name);
   const personSlots = (day, name) => {
@@ -76,13 +80,8 @@ export function autoSchedule(members, timeSlots, cfg, pins = null, prev = null) 
       daily[name][day] -= timeSlots[si].hours;
     }
   };
-  // 2층 선호자는 4층 금지, 4층 선호자는 2층 금지 (3층은 누구나)
-  const floorOk = (m, fl) => {
-    if (fl === "f3a" || fl === "f3b") return true;
-    const here = fl === "f2" ? "2층" : "4층";
-    // 반대층 1순위면 금지하되, 본인이 2순위로 고른 층이면 허용
-    return m.preferFloor1 !== (fl === "f2" ? "4층" : "2층") || m.preferFloor2 === here;
-  };
+  // 2층 선호자는 4층 금지, 4층 선호자는 2층 금지 (3층은 누구나) — 규칙 본체는 utils.floorAllowed
+  const floorOk = floorAllowed;
   const prefFloorKey = (m) => (m.preferFloor1 === "2층" ? "f2" : m.preferFloor1 === "4층" ? "f4" : null);
 
   // ===== 고정 칸 선배치: 알고리즘이 절대 건드리지 않음 (한도보다 사서 결정 우선) =====
@@ -166,12 +165,11 @@ export function autoSchedule(members, timeSlots, cfg, pins = null, prev = null) 
   // ===== 목적함수 (정책 전부 여기) =====
   const OBJ = {
     w24: W.w24 ?? 1.7,                 // 2·4층 선호 일반: 한도까지 채움
-    wNight: W.wNight ?? 2.0,           // 야간 백본 (2층 주담당이 자기 층을 더 채우도록)
+    wNight: W.wNight ?? 2.0,           // 상주 백본(장시간 근로자)이 자기 층을 더 채우도록
     w3: W.w3 ?? 1.0,                   // 3층 선호/무선호
     concave: W.objConcave ?? 0.005,    // 한계효용 체감 (몰아주기 방지)
     prefHour: W.objPrefHour ?? 0.3,    // 1순위 선호층(무선호=3층) 근무 시간당 보너스
     pref2Hour: W.objPref2Hour ?? 0.05, // 2순위 선호층 근무 시간당 보너스 (약한 타이브레이커 — 세게 주면 사진과 오히려 멀어짐)
-    nightEveHour: W.objNightEveHour ?? 3,    // 야간생 저녁 시간당 패널티
     lateClassEveHour: W.objLateClassEveHour ?? 1, // 그날 수업 16시 이후 종료자의 저녁 시간당 패널티
     classDayHour: W.objClassDayHour ?? 0.092, // 그날 수업 있는 일반학생 주간 시간당 보너스
     runPenalty: W.objRunPenalty ?? 0.681,      // 하루 묶음 추가당 패널티
@@ -192,7 +190,7 @@ export function autoSchedule(members, timeSlots, cfg, pins = null, prev = null) 
     eveAdjFrom: W.objEveAdjFrom ?? 15.432,
   };
   const typeWeight = (m) =>
-    m.isNight ? OBJ.wNight : (m.preferFloor1 === "2층" || m.preferFloor1 === "4층") ? OBJ.w24 : OBJ.w3;
+    isLong(m) ? OBJ.wNight : (m.preferFloor1 === "2층" || m.preferFloor1 === "4층") ? OBJ.w24 : OBJ.w3;
 
   const budget = cfg.weeklyBudgetHours ?? Math.round(((cfg.monthlyBudgetHours ?? 900) / 4.345) * 2) / 2;
   const totalHours = () => Object.values(weekly).reduce((a, b) => a + b, 0);
@@ -217,14 +215,11 @@ export function autoSchedule(members, timeSlots, cfg, pins = null, prev = null) 
           if (prev && prev[day]?.[si]?.[fl] === n) J += OBJ.stability * h;
           if (sk === "E") {
             (eveNights[n] ||= new Set()).add(day);
-            if (m.isNight) J -= OBJ.nightEveHour * h;
-            else {
-              // 수업이 늦은 오후에 끝나는 날은 이어서 저녁 근무가 오히려 효율적(등교 1회) — 사진 분석 결과
-              const end = lastClassEnd[n][day];
-              if (end >= OBJ.eveAdjFrom && end <= 17 + 1e-9) J += OBJ.eveAdj * h;
-              else if (end >= 16) J -= OBJ.lateClassEveHour * h;
-            }
-          } else if (!m.isNight && hasClassOnDay(m, day)) J += OBJ.classDayHour * h;
+            // 수업이 늦은 오후에 끝나는 날은 이어서 저녁 근무가 오히려 효율적(등교 1회) — 사진 분석 결과
+            const end = lastClassEnd[n][day];
+            if (end >= OBJ.eveAdjFrom && end <= 17 + 1e-9) J += OBJ.eveAdj * h;
+            else if (end >= 16) J -= OBJ.lateClassEveHour * h;
+          } else if (hasClassOnDay(m, day)) J += OBJ.classDayHour * h;
         }
       }
       for (const [n, sis] of Object.entries(slotsOf)) {
@@ -258,7 +253,7 @@ export function autoSchedule(members, timeSlots, cfg, pins = null, prev = null) 
     }
     for (const s of Object.values(eveNights)) J -= OBJ.eveOver * Math.max(0, s.size - OBJ.maxEveNights);
     for (const m of members) {
-      const fl = m.isNight ? prefFloorKey(m) : null;
+      const fl = isLong(m) ? prefFloorKey(m) : null;
       if (!fl) continue;
       for (const day of DAYS) {
         if ((SHIFTS.B ?? []).every((si) => schedule[day][si][fl] === m.name)) J += OBJ.backboneB;
@@ -275,10 +270,9 @@ export function autoSchedule(members, timeSlots, cfg, pins = null, prev = null) 
     cands.sort((a, b) => {
       const ev = sk === "E";
       const key = (m) =>
-        (ev && m.isNight ? -10 : 0) +                      // 야간생 저녁 최후순위
         (prefersFloor1(m, fl) ? 4 : prefersFloor2(m, fl) ? 1 : 0) +
         (!m.preferFloor1 && (fl === "f3a" || fl === "f3b") ? 2 : 0) +
-        (m.isNight && !ev ? 3 : 0) +                       // 야간생 주간 우선
+        (isLong(m) && !ev ? 3 : 0) +                       // 상주 인력은 주간 백본부터 채운다
         (capOf(m) - weekly[m.name]) / capOf(m);
       return key(b) - key(a) || a.name.localeCompare(b.name, "ko");
     });

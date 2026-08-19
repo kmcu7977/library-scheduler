@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { FLOOR_OPTIONS, DEFAULT_COLORS, EMPTY_INFO } from "../constants";
+import { FLOOR_OPTIONS, DEFAULT_COLORS, EMPTY_INFO, WEEKLY_HOURS_OPTIONS } from "../constants";
 
 export default function MemberSetup({ members, setMembers, onNext, onBack }) {
-  const [form, setForm] = useState({ name: "", ...EMPTY_INFO, isNight: false, timeSlot: null });
+  const [form, setForm] = useState({ name: "", ...EMPTY_INFO, weeklyHours: WEEKLY_HOURS_OPTIONS[0] });
   const [editTarget, setEditTarget] = useState(null);
-  const [editInfo, setEditInfo] = useState({ ...EMPTY_INFO, preferFloor1: null, preferFloor2: null, isNight: false, timeSlot: null });
+  const [editInfo, setEditInfo] = useState({ ...EMPTY_INFO, preferFloor1: null, preferFloor2: null, weeklyHours: WEEKLY_HOURS_OPTIONS[0] });
   const upForm = (f, v) => setForm(prev => ({ ...prev, [f]: v }));
 
   const addMember = () => {
@@ -13,14 +13,14 @@ export default function MemberSetup({ members, setMembers, onNext, onBack }) {
     setMembers(prev => [...prev, {
       name: n, dept: form.dept.trim(), studentId: form.studentId.trim(),
       phone: form.phone.trim(), note: form.note.trim(),
-      color: DEFAULT_COLORS[prev.length % DEFAULT_COLORS.length], classes: [], preferFloor1: null, preferFloor2: null, isNight: form.isNight, timeSlot: form.timeSlot,
+      color: DEFAULT_COLORS[prev.length % DEFAULT_COLORS.length], classes: [], preferFloor1: null, preferFloor2: null, weeklyHours: form.weeklyHours,
     }]);
-    setForm({ name: "", ...EMPTY_INFO, isNight: false, timeSlot: null });
+    setForm({ name: "", ...EMPTY_INFO, weeklyHours: WEEKLY_HOURS_OPTIONS[0] });
   };
 
   const openEdit = m => {
     setEditTarget(m.name);
-    setEditInfo({ dept: m.dept||"", studentId: m.studentId||"", phone: m.phone||"", note: m.note||"", preferFloor1: m.preferFloor1||null, preferFloor2: m.preferFloor2||null, isNight: m.isNight||false, timeSlot: m.timeSlot||null });
+    setEditInfo({ dept: m.dept||"", studentId: m.studentId||"", phone: m.phone||"", note: m.note||"", preferFloor1: m.preferFloor1||null, preferFloor2: m.preferFloor2||null, weeklyHours: m.weeklyHours ?? WEEKLY_HOURS_OPTIONS[0] });
   };
   const saveEdit = () => {
     setMembers(prev => prev.map(m => m.name !== editTarget ? m : { ...m, ...editInfo }));
@@ -46,15 +46,15 @@ export default function MemberSetup({ members, setMembers, onNext, onBack }) {
           </div>
         ))}
         <div className="mf-row" style={{ alignItems: "center" }}>
-          <label className="mf-label">야간</label>
-          <button
-            style={{ fontSize: 12, fontWeight: 700, border: "1px solid", borderRadius: 6, padding: "5px 14px", cursor: "pointer",
-              background: form.isNight ? "#1a237e" : "transparent",
-              color: form.isNight ? "#fff" : "#90a4ae",
-              borderColor: form.isNight ? "#1a237e" : "#cfd8dc" }}
-            onClick={() => { upForm("isNight", !form.isNight); if (!form.isNight) upForm("timeSlot", "주간"); }}>
-            {form.isNight ? "야간 학생 ✓" : "일반 학생"}
-          </button>
+          <label className="mf-label">주 근무</label>
+          <div style={{ display: "flex", gap: 6 }}>
+            {WEEKLY_HOURS_OPTIONS.map(h => (
+              <button key={h} className={"hours-btn" + (form.weeklyHours === h ? " selected" : "")}
+                onClick={() => upForm("weeklyHours", h)}>
+                {h}시간
+              </button>
+            ))}
+          </div>
         </div>
         <button className="btn-primary mf-add" onClick={addMember}>추가</button>
       </div>
@@ -68,8 +68,7 @@ export default function MemberSetup({ members, setMembers, onNext, onBack }) {
             <span style={{ minWidth: 110, fontSize: 11, color: "#78909c" }}>연락처</span>
             <span style={{ minWidth: 180, fontSize: 11, color: "#78909c" }}>선호 층 (1순위 / 2순위)</span>
             <span style={{ minWidth: 70, fontSize: 11, color: "#78909c" }}>비고</span>
-            <span style={{ minWidth: 44, fontSize: 11, color: "#78909c", textAlign: "center" }}>야간</span>
-            <span style={{ minWidth: 88, fontSize: 11, color: "#78909c", textAlign: "center" }}>주간/야간</span>
+            <span style={{ minWidth: 96, fontSize: 11, color: "#78909c", textAlign: "center" }}>주 근무시간</span>
             <span style={{ minWidth: 28 }} />
           </div>
           {members.map((m, idx) => (
@@ -107,25 +106,11 @@ export default function MemberSetup({ members, setMembers, onNext, onBack }) {
                 </div>
               </div>
               <span style={{ minWidth: 70, fontSize: 11, color: "#607d8b", overflow: "hidden", textOverflow: "ellipsis" }}>{m.note || ""}</span>
-              <button
-                style={{ minWidth: 44, fontSize: 11, fontWeight: 700, border: "1px solid", borderRadius: 6, padding: "2px 6px", cursor: "pointer",
-                  background: m.isNight ? "#1a237e" : "transparent",
-                  color: m.isNight ? "#fff" : "#b0bec5",
-                  borderColor: m.isNight ? "#1a237e" : "#cfd8dc" }}
-                onClick={() => setMembers(prev => prev.map(x => x.name !== m.name ? x : {
-                  ...x, isNight: !x.isNight, timeSlot: !x.isNight ? "주간" : x.timeSlot
-                }))}>
-                야간
-              </button>
-              <div style={{ minWidth: 88, display: "flex", gap: 3 }}>
-                {["주간", "야간"].map(ts => (
-                  <button key={ts}
-                    style={{ flex: 1, fontSize: 11, fontWeight: 700, border: "1px solid", borderRadius: 6, padding: "2px 0", cursor: "pointer",
-                      background: m.timeSlot === ts ? "#37474f" : "transparent",
-                      color: m.timeSlot === ts ? "#fff" : "#b0bec5",
-                      borderColor: m.timeSlot === ts ? "#37474f" : "#cfd8dc" }}
-                    onClick={() => setMembers(prev => prev.map(x => x.name !== m.name ? x : { ...x, timeSlot: x.timeSlot === ts ? null : ts }))}>
-                    {ts}
+              <div style={{ minWidth: 96, display: "flex", gap: 3, justifyContent: "center" }}>
+                {WEEKLY_HOURS_OPTIONS.map(h => (
+                  <button key={h} className={"hours-btn sm" + ((m.weeklyHours ?? WEEKLY_HOURS_OPTIONS[0]) === h ? " selected" : "")}
+                    onClick={() => setMembers(prev => prev.map(x => x.name !== m.name ? x : { ...x, weeklyHours: h }))}>
+                    {h}h
                   </button>
                 ))}
               </div>
@@ -190,30 +175,15 @@ export default function MemberSetup({ members, setMembers, onNext, onBack }) {
               </div>
             </div>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
-                <label style={{ minWidth: 44, fontSize: 12, color: "#546e7a" }}>주간/야간</label>
+                <label style={{ minWidth: 44, fontSize: 12, color: "#546e7a" }}>주 근무</label>
                 <div style={{ display: "flex", gap: 6 }}>
-                  {["주간", "야간"].map(ts => (
-                    <button key={ts}
-                      style={{ fontSize: 12, fontWeight: 700, border: "1px solid", borderRadius: 6, padding: "4px 14px", cursor: "pointer",
-                        background: editInfo.timeSlot === ts ? "#37474f" : "transparent",
-                        color: editInfo.timeSlot === ts ? "#fff" : "#90a4ae",
-                        borderColor: editInfo.timeSlot === ts ? "#37474f" : "#cfd8dc" }}
-                      onClick={() => setEditInfo(prev => ({ ...prev, timeSlot: prev.timeSlot === ts ? null : ts }))}>
-                      {ts}
+                  {WEEKLY_HOURS_OPTIONS.map(h => (
+                    <button key={h} className={"hours-btn" + (editInfo.weeklyHours === h ? " selected" : "")}
+                      onClick={() => setEditInfo(prev => ({ ...prev, weeklyHours: h }))}>
+                      {h}시간
                     </button>
                   ))}
                 </div>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
-                <label style={{ minWidth: 44, fontSize: 12, color: "#546e7a" }}>야간</label>
-                <button
-                  style={{ fontSize: 12, fontWeight: 700, border: "1px solid", borderRadius: 6, padding: "4px 14px", cursor: "pointer",
-                    background: editInfo.isNight ? "#1a237e" : "transparent",
-                    color: editInfo.isNight ? "#fff" : "#90a4ae",
-                    borderColor: editInfo.isNight ? "#1a237e" : "#cfd8dc" }}
-                  onClick={() => setEditInfo(prev => ({ ...prev, isNight: !prev.isNight, timeSlot: !prev.isNight ? "주간" : prev.timeSlot }))}>
-                  {editInfo.isNight ? "야간 학생 ✓" : "일반 학생"}
-                </button>
               </div>
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 16 }}>
               <button className="btn-back" style={{ padding: "8px 16px" }} onClick={() => setEditTarget(null)}>취소</button>

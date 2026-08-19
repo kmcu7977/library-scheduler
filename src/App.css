@@ -116,6 +116,56 @@
 .cell-popup { background: #fff; border: 1px solid #90caf9; border-radius: 16px; padding: 24px; min-width: 260px; max-width: 380px; box-shadow: 0 8px 32px #1976d230; }
 .popup-title { font-size: 14px; color: #546e7a; margin-bottom: 16px; font-weight: 500; line-height: 1.6; }
 .popup-members { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* 칸 추천 목록 — 적합한 순서로 세로 나열, 각 줄에 근거를 붙인다 */
+.rec-list { display: flex; flex-direction: column; gap: 5px; max-height: 46vh; overflow-y: auto; }
+.rec-row { display: grid; grid-template-columns: minmax(74px, auto) 1fr auto; align-items: center; gap: 8px;
+  background: none; border: 1.5px solid; border-radius: 10px; padding: 7px 10px; cursor: pointer;
+  font-family: inherit; font-size: 12.5px; text-align: left; transition: background .15s; }
+.rec-row:hover:not(.rec-off) { background: #00000008; }
+.rec-row.rec-off { cursor: not-allowed; background: #fafafa; }
+.rec-row.rec-best { background: #e3f2fd60; }
+.rec-name { font-weight: 700; display: flex; align-items: center; gap: 4px; }
+.rec-star { background: #1976d2; color: #fff; font-size: 9px; font-weight: 700; border-radius: 4px; padding: 1px 4px; }
+.rec-now { background: #eceff1; color: #78909c; font-size: 9px; font-weight: 700; border-radius: 4px; padding: 1px 4px; }
+.rec-why { display: flex; flex-wrap: wrap; gap: 3px; }
+.rec-why em { font-style: normal; font-size: 10.5px; color: #78909c; background: #f5f5f5; border-radius: 4px; padding: 1px 5px; }
+.rec-why em.rec-bad  { color: #c62828; background: #ffebee; }
+.rec-why em.rec-warn { color: #e65100; background: #fff3e0; }
+.rec-remain { font-size: 10.5px; color: #90a4ae; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+/* 드래그로 고르는 중인 칸 */
+.td-cell.sel-cell { outline: 2px solid #1976d2; outline-offset: -2px; background: #1976d215 !important; }
+.sched-table { user-select: none; }
+
+/* 배치 문제 알림 — 막지는 않고 알리기만 한다 */
+.audit-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 0 0 12px;
+  padding: 9px 13px; border-radius: 10px; font-size: 12px; background: #fff8e1; border: 1px solid #ffe082; color: #8d6e00; }
+.audit-bar.audit-error { background: #ffebee; border-color: #ffcdd2; color: #b71c1c; }
+.audit-bar span { display: flex; flex-wrap: wrap; gap: 5px; }
+.audit-bar em { font-style: normal; font-size: 11px; background: #ffffffaa; border-radius: 5px; padding: 1px 6px; }
+.audit-bar em.error { color: #c62828; }
+.audit-bar em.warn { color: #e65100; }
+
+/* 수업시간표 한눈에 보기 */
+.class-modal { max-width: min(920px, 94vw); width: 920px; }
+.class-modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.class-modal .table-wrap { max-height: 62vh; overflow: auto; }
+.class-table .td-class { padding: 4px; vertical-align: top; min-width: 96px; height: 34px; }
+.class-chip { display: inline-block; font-size: 10.5px; font-weight: 700; border-radius: 5px;
+  padding: 1px 5px; margin: 1px; white-space: nowrap; }
+.class-foot { font-size: 11.5px; color: #90a4ae; margin: 10px 2px 0; line-height: 1.6; }
+.class-filter { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+.class-pick { background: none; border: 1.5px solid #cfd8dc; color: #90a4ae; border-radius: 999px;
+  padding: 3px 11px; font-size: 11.5px; font-weight: 700; cursor: pointer; font-family: inherit; }
+.class-pick:hover { background: #00000008; }
+
+/* 주 근무시간 선택 */
+.hours-btn { background: none; border: 1.5px solid #cfd8dc; color: #90a4ae; border-radius: 7px;
+  padding: 5px 14px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; }
+.hours-btn.sm { padding: 2px 8px; font-size: 11px; flex: 1; }
+.hours-btn.selected { border-color: #1976d2; color: #1976d2; background: #e3f2fd; }
+.hours-btn:hover:not(.selected) { background: #00000008; }
 .popup-member-btn { background: none; border: 2px solid; border-radius: 10px; padding: 8px 14px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; transition: background .15s; position: relative; }
 .popup-member-btn:hover:not(.has-class) { background: #00000010; }
 .popup-member-btn.has-class { cursor: not-allowed; }

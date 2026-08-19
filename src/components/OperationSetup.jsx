@@ -64,7 +64,7 @@ export default function OperationSetup({ cfg, onNext }) {
         <div className="cfg-section">
           <div className="cfg-section-title">⏱ 근로 한도</div>
           <div className="cfg-row">
-            <label className="cfg-label">주간 최대 시간</label>
+            <label className="cfg-label" title="인원별로 20/40시간을 따로 정할 수 있고, 이 값은 정하지 않은 사람에게 적용됩니다">기본 주 근무시간</label>
             <div className="cfg-time-inputs">
               <input type="number" className="cfg-num wide" min={1} max={60} value={localCfg.maxWeeklyHours} onChange={e => update("maxWeeklyHours", e.target.value)} />
               <span className="cfg-colon">시간 / 주</span>
@@ -75,13 +75,6 @@ export default function OperationSetup({ cfg, onNext }) {
             <div className="cfg-time-inputs">
               <input type="number" className="cfg-num wide" min={1} max={16} value={localCfg.maxDailyHours} onChange={e => update("maxDailyHours", e.target.value)} />
               <span className="cfg-colon">시간 / 일</span>
-            </div>
-          </div>
-          <div className="cfg-row">
-            <label className="cfg-label">야간 주간 한도</label>
-            <div className="cfg-time-inputs">
-              <input type="number" className="cfg-num wide" min={1} max={60} value={localCfg.maxNightWeeklyHours ?? localCfg.maxWeeklyHours} onChange={e => update("maxNightWeeklyHours", e.target.value)} />
-              <span className="cfg-colon">시간 / 주</span>
             </div>
           </div>
           <div className="cfg-summary">

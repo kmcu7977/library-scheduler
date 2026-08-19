@@ -39,6 +39,14 @@ export function getAvailableMembers(members, day, si, timeSlots) {
   return members.filter(m => !isClassTime(m, day, si, timeSlots));
 }
 
+// 2층 선호자는 4층 금지, 4층 선호자는 2층 금지 (3층은 누구나). 단 본인이 2순위로 고른 층이면 허용
+// scheduler.js(자동배치)와 recommend.js(추천)가 같은 규칙을 써야 하므로 여기 한 곳에만 둔다
+export const floorAllowed = (member, key) => {
+  if (key !== "f2" && key !== "f4") return true;
+  const banned = key === "f2" ? "4층" : "2층";
+  return member.preferFloor1 !== banned || member.preferFloor2 === KEY_TO_FLOOR[key];
+};
+
 export const prefersFloor1 = (member, key) => member.preferFloor1 ? member.preferFloor1 === KEY_TO_FLOOR[key] : false;
 export const prefersFloor2 = (member, key) => member.preferFloor2 ? member.preferFloor2 === KEY_TO_FLOOR[key] : false;
 export const isLunchSlot     = slot => slot.startH >= 12 && slot.startH < 14;

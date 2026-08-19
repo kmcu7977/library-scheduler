@@ -1,12 +1,36 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { DAYS, FLOOR_KEYS, FLOOR_LABEL } from "../constants";
 import { isClassTime } from "../utils";
+import { recommend, audit } from "../recommend";
 import ScheduleCell from "./ScheduleCell";
+import ClassTimetable from "./ClassTimetable";
 
 export default function ScheduleEditor({ members, schedule, setSchedule, pins, setPins, onRegenerate, onExport, onBack, timeSlots, cfg }) {
-  const [editCell, setEditCell] = useState(null);
+  const [editCell, setEditCell] = useState(null);   // { day, fk, sis:[슬롯…] } — 드래그로 여러 칸 선택 가능
+  const [drag, setDrag] = useState(null);           // { day, fk, from, to } — 드래그 진행 중
   const [hoveredMember, setHoveredMember] = useState(null);
   const [regenerating, setRegenerating] = useState(false);
+  const [showClasses, setShowClasses] = useState(false);
+
+  // 드래그는 한 열(같은 요일·같은 층) 안에서 세로로만 늘어난다.
+  // 요일이나 층을 건너뛰면 같은 시간에 두 자리를 맡는 꼴이라 어차피 못 넣는다.
+  useEffect(() => {
+    if (!drag) return;
+    const finish = () => {
+      const lo = Math.min(drag.from, drag.to), hi = Math.max(drag.from, drag.to);
+      const sis = [];
+      for (let i = lo; i <= hi; i++) sis.push(i);
+      setEditCell({ day: drag.day, fk: drag.fk, sis });
+      setDrag(null);
+    };
+    window.addEventListener("mouseup", finish);
+    return () => window.removeEventListener("mouseup", finish);
+  }, [drag]);
+
+  const inDrag = (day, si, fk) =>
+    !!drag && drag.day === day && drag.fk === fk && si >= Math.min(drag.from, drag.to) && si <= Math.max(drag.from, drag.to);
+  const inEdit = (day, si, fk) =>
+    !!editCell && editCell.day === day && editCell.fk === fk && editCell.sis.includes(si);
 
   const isPinned = (day, si, fk) => !!pins?.[day]?.[si]?.[fk];
   const pinCount = useMemo(
@@ -65,34 +89,46 @@ export default function ScheduleEditor({ members, schedule, setSchedule, pins, s
     return map;
   }, [members, schedule, timeSlots]);
 
-  // 수동 배치 = 자동 고정 (재생성해도 유지), 비우기 = 고정 해제 + 칸 비움
+  // 열려 있는 자리에 대한 후보 순위 — 판단은 사서가, 근거는 도구가
+  const recommended = useMemo(
+    () => (editCell ? recommend(members, schedule, timeSlots, cfg, editCell.day, editCell.sis, editCell.fk) : []),
+    [editCell, members, schedule, timeSlots, cfg]
+  );
+
+  // 지정한 칸은 자동배치가 손대지 않으므로, 배치 후 수업이 바뀌면 충돌이 조용히 남는다 → 눈에 보이게
+  const issues = useMemo(() => audit(members, schedule, timeSlots, cfg), [members, schedule, timeSlots, cfg]);
+
+  // 수동 배치 = 자동 고정 (빈칸 채우기를 해도 유지), 비우기 = 고정 해제 + 칸 비움
   const assignMember = name => {
     if (!editCell) return;
-    const { day, si, fk } = editCell;
-    setSchedule(prev => ({ ...prev, [day]: prev[day].map((row, i) => i !== si ? row : { ...row, [fk]: name || null }) }));
-    setPin(day, si, fk, name || null);
+    const { day, fk, sis } = editCell;
+    const set = new Set(sis);
+    setSchedule(prev => ({ ...prev, [day]: prev[day].map((row, i) => (set.has(i) ? { ...row, [fk]: name || null } : row)) }));
+    sis.forEach(si => setPin(day, si, fk, name || null));
     setEditCell(null);
   };
 
-  // 이름은 그대로 두고 고정만 해제 (재생성 시 자동배치 대상이 됨)
+  // 이름은 그대로 두고 고정만 해제 (빈칸 채우기 때 자동배치 대상이 됨)
   const unpinCell = () => {
     if (!editCell) return;
-    setPin(editCell.day, editCell.si, editCell.fk, null);
+    editCell.sis.forEach(si => setPin(editCell.day, si, editCell.fk, null));
     setEditCell(null);
   };
+
+  const editPinned = !!editCell && editCell.sis.some(si => isPinned(editCell.day, si, editCell.fk));
 
   return (
     <div className="step-card wide">
       <div className="editor-header">
         <h2 className="step-title" style={{ margin: 0 }}>③ 시간표 확인 및 수정</h2>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <div className="cfg-badge">🕐 {cfg.openHour}:{String(cfg.openMin).padStart(2,"0")}~{cfg.closeHour}:{String(cfg.closeMin).padStart(2,"0")} · 주{cfg.maxWeeklyHours}h{cfg.maxNightWeeklyHours && cfg.maxNightWeeklyHours !== cfg.maxWeeklyHours ? `(야간${cfg.maxNightWeeklyHours}h)` : ""} / 일{cfg.maxDailyHours}h</div>
-          <div className="hover-hint">💡 이름에 마우스 올리면 대체 인원 표시</div>
+          <div className="cfg-badge">🕐 {cfg.openHour}:{String(cfg.openMin).padStart(2,"0")}~{cfg.closeHour}:{String(cfg.closeMin).padStart(2,"0")} · 기본 주{cfg.maxWeeklyHours}h / 일{cfg.maxDailyHours}h</div>
+          <div className="hover-hint">💡 칸을 세로로 드래그하면 여러 칸을 한 번에 지정합니다</div>
         </div>
       </div>
       <div className="weekly-bar">
         {members.map(m => {
-          const maxW = m.isNight ? (cfg.maxNightWeeklyHours ?? cfg.maxWeeklyHours) : cfg.maxWeeklyHours;
+          const maxW = m.weeklyHours ?? cfg.maxWeeklyHours;
           const h = weeklyMap[m.name] || 0;
           const nh = nightHourMap[m.name] || 0;
           const over = h > maxW;
@@ -103,7 +139,7 @@ export default function ScheduleEditor({ members, schedule, setSchedule, pins, s
             <div key={m.name} className="weekly-item">
               <span className="weekly-name" style={{ color: m.color }}>
                 {m.name}
-                {m.isNight && <span style={{ marginLeft: 4, fontSize: 10, fontWeight: 700, background: "#1a237e", color: "#fff", borderRadius: 4, padding: "1px 4px" }}>야</span>}
+                {maxW !== cfg.maxWeeklyHours && <span style={{ marginLeft: 4, fontSize: 10, fontWeight: 700, background: "#1a237e", color: "#fff", borderRadius: 4, padding: "1px 4px" }}>{maxW}h</span>}
               </span>
               <div className="weekly-track" style={{ display: "flex" }}>
                 <div style={{ width: `${dayPct}%`, height: "100%", background: over ? "#e06c75" : m.color, borderRadius: "3px 0 0 3px" }} />
@@ -117,6 +153,15 @@ export default function ScheduleEditor({ members, schedule, setSchedule, pins, s
           );
         })}
       </div>
+      {issues.length > 0 && (
+        <div className={`audit-bar ${issues.some(i => i.level === "error") ? "audit-error" : ""}`}>
+          <b>{issues.some(i => i.level === "error") ? "⚠️ 확인이 필요합니다" : "한도를 넘긴 배치가 있습니다"}</b>
+          <span>
+            {issues.slice(0, 4).map((i, k) => <em key={k} className={i.level}>{i.text}</em>)}
+            {issues.length > 4 && <em>외 {issues.length - 4}건</em>}
+          </span>
+        </div>
+      )}
       <div className="table-wrap">
         <table className="sched-table">
           <thead>
@@ -142,8 +187,11 @@ export default function ScheduleEditor({ members, schedule, setSchedule, pins, s
                     fk, day, si, members, schedule, timeSlots,
                     name: schedule[day]?.[si]?.[fk] || "",
                     pinned: isPinned(day, si, fk),
-                    active: editCell?.day === day && editCell?.si === si && editCell?.fk === fk,
-                    onClick: () => setEditCell({ day, si, fk }),
+                    active: inEdit(day, si, fk),
+                    selected: inDrag(day, si, fk),
+                    dragging: !!drag,
+                    onDragStart: () => setDrag({ day, fk, from: si, to: si }),
+                    onDragOver: () => setDrag(d => (d && d.day === day && d.fk === fk ? { ...d, to: si } : d)),
                     onHoverMember: setHoveredMember,
                     dim: hoveredMember
                       ? isClassTime(members.find(m => m.name === hoveredMember), day, si, timeSlots)
@@ -165,25 +213,42 @@ export default function ScheduleEditor({ members, schedule, setSchedule, pins, s
         <div className="cell-popup-overlay" onClick={() => setEditCell(null)}>
           <div className="cell-popup" onClick={e => e.stopPropagation()}>
             <p className="popup-title">
-              {editCell.day}요일 {timeSlots[editCell.si].label.split("\n")[0]}<br />
-              <span style={{ color: "#1976d2" }}>{FLOOR_LABEL[editCell.fk]}</span> 담당자 변경
+              {editCell.day}요일 {timeSlots[editCell.sis[0]].label.split("\n")[0].split("~")[0]}
+              ~{timeSlots[editCell.sis[editCell.sis.length - 1]].label.split("\n")[0].split("~")[1]}
+              {editCell.sis.length > 1 && <span style={{ color: "#1976d2", fontWeight: 700 }}> ({editCell.sis.length}칸)</span>}<br />
+              <span style={{ color: "#1976d2" }}>{FLOOR_LABEL[editCell.fk]}</span> 담당자 지정
               <span style={{ display: "block", fontSize: 11, color: "#90a4ae", marginTop: 4 }}>
-                직접 지정한 칸은 📌 고정되어 재배치해도 유지됩니다
+                적합한 순서로 정렬했습니다 · 회색은 배치 불가, 주황 표시는 한도를 넘지만 지정은 가능합니다
               </span>
             </p>
-            <div className="popup-members">
-              {members.map(m => {
-                const isCls = isClassTime(m, editCell.day, editCell.si, timeSlots);
+            <div className="rec-list">
+              {recommended.map((r, idx) => {
+                const m = r.member;
+                const best = idx === 0 && r.blocked.length === 0;
+                const dimmed = r.conflicts.length > 0;
                 return (
-                  <button key={m.name} className={`popup-member-btn ${isCls ? "has-class" : ""}`}
-                    style={{ borderColor: m.color + (isCls ? "44" : ""), color: isCls ? m.color + "55" : m.color }}
-                    onClick={() => !isCls && assignMember(m.name)} title={isCls ? "수업 시간과 겹침" : ""}>
-                    {m.name}{isCls && <span className="class-badge">수업</span>}
+                  <button key={m.name} className={`rec-row ${dimmed ? "rec-off" : ""} ${best ? "rec-best" : ""}`}
+                    style={{ borderColor: m.color + (dimmed ? "33" : "99") }}
+                    onClick={() => !dimmed && assignMember(m.name)}
+                    title={dimmed ? r.conflicts.join(", ") : "이 사람으로 지정"}>
+                    <span className="rec-name" style={{ color: dimmed ? "#b0bec5" : m.color }}>
+                      {best && <span className="rec-star">추천</span>}
+                      {m.name}
+                      {r.isCurrent && <span className="rec-now">현재</span>}
+                    </span>
+                    <span className="rec-why">
+                      {r.conflicts.map(c => <em key={c} className="rec-bad">{c}</em>)}
+                      {r.warnings.map(w => <em key={w} className="rec-warn">{w}</em>)}
+                      {r.conflicts.length === 0 && r.why.map(w => <em key={w}>{w}</em>)}
+                    </span>
+                    <span className="rec-remain">여유 {r.remain}h</span>
                   </button>
                 );
               })}
+            </div>
+            <div className="popup-members" style={{ marginTop: 12 }}>
               <button className="popup-member-btn clear-btn" onClick={() => assignMember(null)}>비우기</button>
-              {isPinned(editCell.day, editCell.si, editCell.fk) && (
+              {editPinned && (
                 <button className="popup-member-btn clear-btn" style={{ color: "#f57f17", borderColor: "#f9a825" }} onClick={unpinCell}>
                   📌 고정 해제
                 </button>
@@ -196,14 +261,16 @@ export default function ScheduleEditor({ members, schedule, setSchedule, pins, s
         <button className="btn-back" onClick={onBack}>← 뒤로</button>
         <button className="btn-back" style={{ background: "#1976d2", color: "#fff", borderColor: "#1976d2" }}
           onClick={handleRegenerate} disabled={regenerating}>
-          {regenerating ? "⏳ 재배치 중..." : `🔄 재배치${pinCount > 0 ? ` (📌${pinCount}칸 유지)` : ""}`}
+          {regenerating ? "⏳ 채우는 중..." : `🪄 빈칸 채우기${pinCount > 0 ? ` (📌${pinCount}칸 유지)` : ""}`}
         </button>
+        <button className="btn-back" onClick={() => setShowClasses(true)}>📚 수업시간표</button>
         {pinCount > 0 && (
           <button className="btn-back" style={{ color: "#f57f17", borderColor: "#f9a825" }}
             onClick={() => setPins({})}>📌 전체 고정 해제</button>
         )}
         <button className="btn-export" onClick={onExport}>📥 엑셀 다운로드</button>
       </div>
+      {showClasses && <ClassTimetable members={members} cfg={cfg} onClose={() => setShowClasses(false)} />}
     </div>
   );
 }

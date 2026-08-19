@@ -26,7 +26,13 @@ export default function App() {
     loadFromFirebase().then(data => {
       if (data) {
         if (data.cfg)     { setCfg(data.cfg); setTimeSlots(buildTimeSlots(data.cfg)); }
-        if (data.members) setMembers(data.members);
+        // 예전 데이터 이관: "야간 학생" 플래그는 사실상 주 근무시간 구분이었다 → weeklyHours로 옮긴다
+        if (data.members) setMembers(data.members.map(m => {
+          if (m.weeklyHours) return m;
+          const { isNight, timeSlot, ...rest } = m;
+          // 예전 야간 한도(30h 등)를 그대로 옮기면 20/40 선택지 어디에도 안 걸려 화면에 표시되지 않는다
+          return { ...rest, weeklyHours: isNight ? 40 : (data.cfg?.maxWeeklyHours ?? 20) };
+        }));
         if (data.schedule) {
           const restored = {};
           DAYS.forEach(day => {
@@ -73,17 +79,23 @@ export default function App() {
     setStep(1);
   };
 
+  const emptyGrid = ts => Object.fromEntries(DAYS.map(d => [d, ts.map(() => ({ f2: null, f3a: null, f3b: null, f4: null }))]));
+
+  // 빈 표에서 시작한다 — 사서가 직접 채우고, 남은 빈칸만 "빈칸 채우기"로 넘긴다.
+  // 이미 짜둔 시간표가 있으면 그대로 이어서 연다 (운영 설정이 바뀌어 칸 수가 안 맞을 때만 새로)
   const handleGenerate = () => {
     const ts = buildTimeSlots(cfg);
     setTimeSlots(ts);
-    setSchedule(autoSchedule(members, ts, cfg, pins)); // 고정 칸은 유지하고 나머지만 배치
+    const fits = s => s && DAYS.every(d => Array.isArray(s[d]) && s[d].length === ts.length);
+    setSchedule(s => (fits(s) ? s : emptyGrid(ts)));
     setStep(3);
   };
 
+  // 빈칸 채우기 — 사서가 지정한 칸(📌)은 그대로 두고 나머지만 자동으로 채운다.
+  // 기존 시간표를 앵커로 함께 넘겨 이미 자동으로 채워졌던 칸도 되도록 유지한다(판이 통째로 섞이지 않게)
   const handleRegenerate = () => {
     const ts = buildTimeSlots(cfg);
     setTimeSlots(ts);
-    // 기존 시간표를 앵커로 전달 → 고정 칸을 지키느라 바뀌어야 하는 칸만 바뀜
     setSchedule(autoSchedule(members, ts, cfg, pins, schedule));
     setStep(3);
   };
