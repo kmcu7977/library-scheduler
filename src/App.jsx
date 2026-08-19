@@ -169,11 +169,22 @@ export default function App() {
       {showResetConfirm && (
         <div className="cell-popup-overlay" onClick={() => setShowResetConfirm(false)}>
           <div className="cell-popup" onClick={e => e.stopPropagation()} style={{ maxWidth: 320, textAlign: "center" }}>
-            <p style={{ fontSize: 15, fontWeight: 700, color: "#e06c75", marginBottom: 8 }}>⚠️ 초기화</p>
-            <p className="popup-title" style={{ marginBottom: 20 }}>저장된 모든 데이터가 삭제됩니다.<br />계속하시겠습니까?</p>
+            <p style={{ fontSize: 15, fontWeight: 700, color: "#e06c75", marginBottom: 8 }}>⚠️ 전체 초기화</p>
+            <p className="popup-title" style={{ marginBottom: 16 }}>
+              아래가 모두 삭제되며 되돌릴 수 없습니다.
+              <span style={{ display: "block", marginTop: 10, padding: "10px 12px", background: "#ffebee", borderRadius: 8, color: "#b71c1c", fontSize: 13, textAlign: "left", lineHeight: 1.8 }}>
+                · 등록한 인원 <b>{members.length}명</b>{members.length > 0 && <span style={{ fontSize: 11 }}> (학과·학번·연락처 포함)</span>}<br />
+                · 인원별 수업시간 <b>{members.reduce((a, m) => a + (m.classes?.length || 0), 0)}건</b><br />
+                · 작성한 시간표와 📌 고정<br />
+                · 운영 설정 (학기 중 기본값으로 되돌아감)
+              </span>
+              <span style={{ display: "block", marginTop: 10, fontSize: 12, color: "#607d8b" }}>
+                시간표만 지우시려면 시간표 화면의 <b>🧹 시간표 비우기</b>를 쓰세요.
+              </span>
+            </p>
             <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
               <button className="btn-back" onClick={() => setShowResetConfirm(false)}>취소</button>
-              <button style={{ background: "#e06c75", color: "#fff", border: "none", borderRadius: 10, padding: "11px 24px", fontSize: 13, fontWeight: 700, cursor: "pointer" }} onClick={handleReset}>초기화</button>
+              <button style={{ background: "#e06c75", color: "#fff", border: "none", borderRadius: 10, padding: "11px 24px", fontSize: 13, fontWeight: 700, cursor: "pointer" }} onClick={handleReset}>전부 삭제</button>
             </div>
           </div>
         </div>

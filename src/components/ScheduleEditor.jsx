@@ -11,26 +11,39 @@ export default function ScheduleEditor({ members, schedule, setSchedule, pins, s
   const [hoveredMember, setHoveredMember] = useState(null);
   const [regenerating, setRegenerating] = useState(false);
   const [showClasses, setShowClasses] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
 
-  // 드래그는 한 열(같은 요일·같은 층) 안에서 세로로만 늘어난다.
-  // 요일이나 층을 건너뛰면 같은 시간에 두 자리를 맡는 꼴이라 어차피 못 넣는다.
+  // 표의 열 = 요일 × 층. 드래그는 이 열 축과 시간 축으로 이루어진 사각 영역이다
+  // (세로 한 줄, 여러 요일 가로지르기, 대각선 모두 같은 규칙으로 처리된다)
+  const COLS = DAYS.flatMap(day => FLOOR_KEYS.map(fk => ({ day, fk })));
+  const colOf = (day, fk) => DAYS.indexOf(day) * FLOOR_KEYS.length + FLOOR_KEYS.indexOf(fk);
+  const rectOf = d => {
+    const [c0, c1] = [Math.min(d.fromCol, d.toCol), Math.max(d.fromCol, d.toCol)];
+    const [s0, s1] = [Math.min(d.fromSi, d.toSi), Math.max(d.fromSi, d.toSi)];
+    return { c0, c1, s0, s1 };
+  };
+  const cellsOf = d => {
+    const { c0, c1, s0, s1 } = rectOf(d);
+    const cells = [];
+    for (let c = c0; c <= c1; c++) for (let si = s0; si <= s1; si++) cells.push({ ...COLS[c], si });
+    return cells;
+  };
+
   useEffect(() => {
     if (!drag) return;
-    const finish = () => {
-      const lo = Math.min(drag.from, drag.to), hi = Math.max(drag.from, drag.to);
-      const sis = [];
-      for (let i = lo; i <= hi; i++) sis.push(i);
-      setEditCell({ day: drag.day, fk: drag.fk, sis });
-      setDrag(null);
-    };
+    const finish = () => { setEditCell({ cells: cellsOf(drag) }); setDrag(null); };
     window.addEventListener("mouseup", finish);
     return () => window.removeEventListener("mouseup", finish);
   }, [drag]);
 
-  const inDrag = (day, si, fk) =>
-    !!drag && drag.day === day && drag.fk === fk && si >= Math.min(drag.from, drag.to) && si <= Math.max(drag.from, drag.to);
+  const inDrag = (day, si, fk) => {
+    if (!drag) return false;
+    const { c0, c1, s0, s1 } = rectOf(drag);
+    const c = colOf(day, fk);
+    return c >= c0 && c <= c1 && si >= s0 && si <= s1;
+  };
   const inEdit = (day, si, fk) =>
-    !!editCell && editCell.day === day && editCell.fk === fk && editCell.sis.includes(si);
+    !!editCell && editCell.cells.some(x => x.day === day && x.si === si && x.fk === fk);
 
   const isPinned = (day, si, fk) => !!pins?.[day]?.[si]?.[fk];
   const pinCount = useMemo(
@@ -91,7 +104,7 @@ export default function ScheduleEditor({ members, schedule, setSchedule, pins, s
 
   // 열려 있는 자리에 대한 후보 순위 — 판단은 사서가, 근거는 도구가
   const recommended = useMemo(
-    () => (editCell ? recommend(members, schedule, timeSlots, cfg, editCell.day, editCell.sis, editCell.fk) : []),
+    () => (editCell ? recommend(members, schedule, timeSlots, cfg, editCell.cells) : []),
     [editCell, members, schedule, timeSlots, cfg]
   );
 
@@ -101,21 +114,50 @@ export default function ScheduleEditor({ members, schedule, setSchedule, pins, s
   // 수동 배치 = 자동 고정 (빈칸 채우기를 해도 유지), 비우기 = 고정 해제 + 칸 비움
   const assignMember = name => {
     if (!editCell) return;
-    const { day, fk, sis } = editCell;
-    const set = new Set(sis);
-    setSchedule(prev => ({ ...prev, [day]: prev[day].map((row, i) => (set.has(i) ? { ...row, [fk]: name || null } : row)) }));
-    sis.forEach(si => setPin(day, si, fk, name || null));
+    setSchedule(prev => {
+      const next = { ...prev };
+      for (const c of editCell.cells) {
+        next[c.day] = (next[c.day] === prev[c.day] ? [...prev[c.day]] : next[c.day]);
+        next[c.day][c.si] = { ...(next[c.day][c.si] || {}), [c.fk]: name || null };
+      }
+      return next;
+    });
+    editCell.cells.forEach(c => setPin(c.day, c.si, c.fk, name || null));
     setEditCell(null);
   };
 
   // 이름은 그대로 두고 고정만 해제 (빈칸 채우기 때 자동배치 대상이 됨)
   const unpinCell = () => {
     if (!editCell) return;
-    editCell.sis.forEach(si => setPin(editCell.day, si, editCell.fk, null));
+    editCell.cells.forEach(c => setPin(c.day, c.si, c.fk, null));
     setEditCell(null);
   };
 
-  const editPinned = !!editCell && editCell.sis.some(si => isPinned(editCell.day, si, editCell.fk));
+  const editPinned = !!editCell && editCell.cells.some(c => isPinned(c.day, c.si, c.fk));
+
+  // 시간표 전체 비우기 — 배치와 고정(📌)을 함께 지운다. 인원·수업 데이터는 그대로 둔다
+  const clearAll = () => {
+    setSchedule(prev => Object.fromEntries(DAYS.map(day =>
+      [day, (prev[day] || []).map(() => ({ f2: null, f3a: null, f3b: null, f4: null }))])));
+    setPins({});
+    setConfirmClear(false);
+  };
+
+  // 팝업 제목: 여러 요일·층에 걸칠 수 있으므로 범위로 요약한다
+  const editSummary = useMemo(() => {
+    if (!editCell) return null;
+    const uniq = (arr, order) => [...new Set(arr)].sort((a, b) => order.indexOf(a) - order.indexOf(b));
+    const days = uniq(editCell.cells.map(c => c.day), DAYS);
+    const floors = uniq(editCell.cells.map(c => FLOOR_LABEL[c.fk]), ["2층", "3층", "4층"]);
+    const sis = editCell.cells.map(c => c.si);
+    const lo = Math.min(...sis), hi = Math.max(...sis);
+    const at = (i, part) => timeSlots[i].label.split("\n")[0].split("~")[part];
+    return {
+      days: days.length > 2 ? `${days[0]}~${days[days.length - 1]}요일` : days.join("·") + "요일",
+      time: `${at(lo, 0)}~${at(hi, 1)}`,
+      floors: floors.join("·"),
+    };
+  }, [editCell, timeSlots]);
 
   return (
     <div className="step-card wide">
@@ -123,7 +165,7 @@ export default function ScheduleEditor({ members, schedule, setSchedule, pins, s
         <h2 className="step-title" style={{ margin: 0 }}>③ 시간표 확인 및 수정</h2>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <div className="cfg-badge">🕐 {cfg.openHour}:{String(cfg.openMin).padStart(2,"0")}~{cfg.closeHour}:{String(cfg.closeMin).padStart(2,"0")} · 기본 주{cfg.maxWeeklyHours}h / 일{cfg.maxDailyHours}h</div>
-          <div className="hover-hint">💡 칸을 세로로 드래그하면 여러 칸을 한 번에 지정합니다</div>
+          <div className="hover-hint">💡 드래그하면 가로·세로·대각선 어느 방향이든 영역으로 한 번에 지정합니다</div>
         </div>
       </div>
       <div className="weekly-bar">
@@ -190,8 +232,8 @@ export default function ScheduleEditor({ members, schedule, setSchedule, pins, s
                     active: inEdit(day, si, fk),
                     selected: inDrag(day, si, fk),
                     dragging: !!drag,
-                    onDragStart: () => setDrag({ day, fk, from: si, to: si }),
-                    onDragOver: () => setDrag(d => (d && d.day === day && d.fk === fk ? { ...d, to: si } : d)),
+                    onDragStart: () => setDrag({ fromCol: colOf(day, fk), toCol: colOf(day, fk), fromSi: si, toSi: si }),
+                    onDragOver: () => setDrag(d => (d ? { ...d, toCol: colOf(day, fk), toSi: si } : d)),
                     onHoverMember: setHoveredMember,
                     dim: hoveredMember
                       ? isClassTime(members.find(m => m.name === hoveredMember), day, si, timeSlots)
@@ -213,10 +255,9 @@ export default function ScheduleEditor({ members, schedule, setSchedule, pins, s
         <div className="cell-popup-overlay" onClick={() => setEditCell(null)}>
           <div className="cell-popup" onClick={e => e.stopPropagation()}>
             <p className="popup-title">
-              {editCell.day}요일 {timeSlots[editCell.sis[0]].label.split("\n")[0].split("~")[0]}
-              ~{timeSlots[editCell.sis[editCell.sis.length - 1]].label.split("\n")[0].split("~")[1]}
-              {editCell.sis.length > 1 && <span style={{ color: "#1976d2", fontWeight: 700 }}> ({editCell.sis.length}칸)</span>}<br />
-              <span style={{ color: "#1976d2" }}>{FLOOR_LABEL[editCell.fk]}</span> 담당자 지정
+              {editSummary.days} {editSummary.time}
+              {editCell.cells.length > 1 && <span style={{ color: "#1976d2", fontWeight: 700 }}> ({editCell.cells.length}칸)</span>}<br />
+              <span style={{ color: "#1976d2" }}>{editSummary.floors}</span> 담당자 지정
               <span style={{ display: "block", fontSize: 11, color: "#90a4ae", marginTop: 4 }}>
                 적합한 순서로 정렬했습니다 · 회색은 배치 불가, 주황 표시는 한도를 넘지만 지정은 가능합니다
               </span>
@@ -268,9 +309,27 @@ export default function ScheduleEditor({ members, schedule, setSchedule, pins, s
           <button className="btn-back" style={{ color: "#f57f17", borderColor: "#f9a825" }}
             onClick={() => setPins({})}>📌 전체 고정 해제</button>
         )}
+        <button className="btn-back" style={{ color: "#c62828", borderColor: "#ef9a9a" }}
+          onClick={() => setConfirmClear(true)}>🧹 시간표 비우기</button>
         <button className="btn-export" onClick={onExport}>📥 엑셀 다운로드</button>
       </div>
       {showClasses && <ClassTimetable members={members} cfg={cfg} onClose={() => setShowClasses(false)} />}
+      {confirmClear && (
+        <div className="cell-popup-overlay" onClick={() => setConfirmClear(false)}>
+          <div className="cell-popup" onClick={e => e.stopPropagation()} style={{ maxWidth: 340, textAlign: "center" }}>
+            <p style={{ fontSize: 15, fontWeight: 700, color: "#c62828", marginBottom: 8 }}>🧹 시간표 비우기</p>
+            <p className="popup-title" style={{ marginBottom: 20 }}>
+              배치된 인원과 📌 고정이 모두 지워집니다.<br />
+              <span style={{ fontSize: 12, color: "#90a4ae" }}>등록한 인원과 수업시간은 그대로 남습니다.</span>
+            </p>
+            <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+              <button className="btn-back" onClick={() => setConfirmClear(false)}>취소</button>
+              <button style={{ background: "#c62828", color: "#fff", border: "none", borderRadius: 10, padding: "11px 24px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
+                onClick={clearAll}>비우기</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

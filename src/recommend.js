@@ -5,8 +5,8 @@
 // 그래서 규정을 넘는 사람도 숨기지 않는다. 사유를 붙여 아래로 내릴 뿐,
 // 넣을지 말지는 사서가 정한다 (실제 수기 시간표에도 일 8h 초과가 존재함).
 //
-// 드래그로 여러 칸을 한 번에 고를 수 있으므로 슬롯은 항상 목록으로 다룬다.
-// 여러 칸은 "한 덩어리 근무"로 평가한다 — 시간은 합계로, 수업 충돌은 하나라도 걸리면 불가.
+// 드래그로 여러 요일·여러 층에 걸쳐 고를 수 있으므로 선택은 항상 칸 목록으로 다룬다.
+// 고른 칸 전체를 "한 사람이 맡을 근무"로 보고 시간은 합계로, 충돌은 하나라도 걸리면 불가로 판정한다.
 import { DAYS, FLOOR_KEYS } from "./constants";
 import { isClassTime, floorAllowed, prefersFloor1, prefersFloor2 } from "./utils";
 
@@ -14,6 +14,131 @@ import { isClassTime, floorAllowed, prefersFloor1, prefersFloor2 } from "./utils
 const capOf = (m, cfg) => m.weeklyHours ?? cfg.maxWeeklyHours;
 const tier = (r) => (r.conflicts.length ? 2 : r.warnings.length ? 1 : 0);
 const cellAt = (schedule, day, si, fk) => schedule?.[day]?.[si]?.[fk] || null;
+const keyOf = (c) => `${c.day}|${c.si}|${c.fk}`;
+
+/**
+ * 한 번에 고른 칸들에 대한 후보 순위.
+ * @param cells [{day, si, fk}] — 드래그로 고른 칸 목록 (한 칸이면 길이 1)
+ * @returns [{ member, score, why[], conflicts[], warnings[], blocked[], remain, isCurrent }]
+ *          conflicts = 배치 불가(수업·중복) / warnings = 규정 초과지만 사서 재량(한도·층) / blocked = 둘의 합
+ */
+export function recommend(members, schedule, timeSlots, cfg, cells) {
+  const picked = new Set(cells.map(keyOf));
+  const hours = cells.reduce((a, c) => a + timeSlots[c.si].hours, 0);
+  const maxCap = Math.max(...members.map(m => capOf(m, cfg)), 1);
+
+  // 고른 칸을 (요일, 층)별로 묶는다 — 이어서 근무 판정은 같은 열 안에서만 의미가 있다
+  const runs = new Map();
+  for (const c of cells) {
+    const k = `${c.day}|${c.fk}`;
+    if (!runs.has(k)) runs.set(k, { day: c.day, fk: c.fk, sis: [] });
+    runs.get(k).sis.push(c.si);
+  }
+  for (const r of runs.values()) r.sis.sort((a, b) => a - b);
+
+  // 요일별 선택 시간 (하루 한도 판정용)
+  const pickedByDay = {};
+  for (const c of cells) pickedByDay[c.day] = (pickedByDay[c.day] || 0) + timeSlots[c.si].hours;
+
+  // 같은 요일·같은 시각을 두 층 이상 고른 경우 — 한 사람이 동시에 맡을 수 없다.
+  // 선택 자체의 성질이라 후보와 무관하지만, 비우기에는 쓸 수 있으므로 막지 않고 사유만 붙인다
+  const slotSeen = new Set();
+  let overlapping = false;
+  for (const c of cells) {
+    const k = `${c.day}|${c.si}`;
+    if (slotSeen.has(k)) overlapping = true;
+    slotSeen.add(k);
+  }
+
+  return members.map(m => {
+    const cap = capOf(m, cfg);
+
+    // 이미 배정된 시간 — 지금 고른 칸은 덮어쓸 것이므로 뺀다
+    let week = 0;
+    const byDay = {};
+    for (const d of DAYS) {
+      for (let si = 0; si < timeSlots.length; si++) {
+        for (const fk of FLOOR_KEYS) {
+          if (picked.has(`${d}|${si}|${fk}`)) continue;
+          if (cellAt(schedule, d, si, fk) !== m.name) continue;
+          week += timeSlots[si].hours;
+          byDay[d] = (byDay[d] || 0) + timeSlots[si].hours;
+        }
+      }
+    }
+
+    // 애초에 몸이 둘이 아니라 불가능한 것 — 넣지 못하게 막는다
+    const conflicts = [];
+    if (cells.some(c => isClassTime(m, c.day, c.si, timeSlots))) conflicts.push("수업 중");
+    if (overlapping) conflicts.push("같은 시간 여러 층");
+    else if (cells.some(c => FLOOR_KEYS.some(fk => fk !== c.fk && cellAt(schedule, c.day, c.si, fk) === m.name)))
+      conflicts.push("같은 시간 타 층");
+
+    // 규정을 넘지만 사서가 판단할 몫 — 알리기만 하고 막지 않는다
+    const warnings = [];
+    const badFloor = cells.find(c => !floorAllowed(m, c.fk));
+    if (badFloor) warnings.push(`${m.preferFloor1} 담당`);
+    if (week + hours > cap + 1e-9) warnings.push(`주 ${cap}h 초과`);
+    for (const [day, h] of Object.entries(pickedByDay))
+      if ((byDay[day] || 0) + h > cfg.maxDailyHours + 1e-9) {
+        warnings.push(`${Object.keys(pickedByDay).length > 1 ? day + " " : ""}일 ${cfg.maxDailyHours}h 초과`);
+        break;
+      }
+    const blocked = [...conflicts, ...warnings];
+
+    // 소프트 점수 — 근거로 그대로 보여줄 수 있는 것만 넣는다
+    let score = 0;
+    const why = [];
+
+    // 고른 묶음의 바로 앞/뒤 칸에 같은 사람이 있으면 근무가 이어진다
+    const adjacent = [...runs.values()].some(r =>
+      cellAt(schedule, r.day, r.sis[0] - 1, r.fk) === m.name ||
+      cellAt(schedule, r.day, r.sis[r.sis.length - 1] + 1, r.fk) === m.name);
+    if (adjacent) { score += 3; why.push("이어서 근무"); }
+
+    // 선호 층은 시간 비율만큼 반영한다 (여러 층에 걸쳐 고를 수 있으므로)
+    let prefH = 0, pref2H = 0;
+    for (const c of cells) {
+      const h = timeSlots[c.si].hours;
+      if (prefersFloor1(m, c.fk) || (!m.preferFloor1 && (c.fk === "f3a" || c.fk === "f3b"))) prefH += h;
+      else if (prefersFloor2(m, c.fk)) pref2H += h;
+    }
+    if (prefH > 0) { score += 2 * (prefH / hours); why.push(prefH === hours ? "1순위 층" : "일부 1순위 층"); }
+    if (pref2H > 0) { score += 1 * (pref2H / hours); why.push(pref2H === hours ? "2순위 층" : "일부 2순위 층"); }
+
+    const remain = cap - week;
+    score += (remain / maxCap) * 1.5;
+
+    if (Object.keys(pickedByDay).some(day => nearClass(m, day, runsOfDay(runs, day), timeSlots)))
+      { score += 0.5; why.push("수업과 붙음"); }
+    if (Object.keys(pickedByDay).some(day => (byDay[day] || 0) > 0))
+      { score += 0.5; why.push("그날 이미 출근"); }
+
+    const isCurrent = cells.every(c => cellAt(schedule, c.day, c.si, c.fk) === m.name);
+    return { member: m, score, why, conflicts, warnings, blocked, remain, isCurrent };
+  })
+    // 넣을 수 있는 사람 → 넣을 수는 있지만 한도를 넘는 사람 → 아예 못 넣는 사람 순
+    .sort((a, b) => tier(a) - tier(b) || b.score - a.score || a.member.name.localeCompare(b.member.name, "ko"));
+}
+
+// 그 요일에 고른 묶음들의 [시작, 끝] 시각
+const runsOfDay = (runs, day) =>
+  [...runs.values()].filter(r => r.day === day).map(r => [
+    r.sis[0], r.sis[r.sis.length - 1],
+  ]);
+
+// 그날 수업과 근무 덩어리가 gap 이내로 붙어 있나 (등교 한 번에 수업+근무를 몰아주는 실제 운영 패턴).
+// 1시간 — 그 이상 뜨면 "붙었다"고 보기 어렵다
+function nearClass(m, day, ranges, timeSlots, gap = 1) {
+  return ranges.some(([a, b]) => {
+    const s = timeSlots[a].startH, e = timeSlots[b].startH + timeSlots[b].hours;
+    return (m.classes || []).some(c => {
+      if (c.day !== day) return false;
+      const cs = c.startHour + c.startMin / 60, ce = c.endHour + c.endMin / 60;
+      return cs - e <= gap && s - ce <= gap;
+    });
+  });
+}
 
 /**
  * 지금 짜여 있는 시간표에 문제가 없는지 훑는다.
@@ -54,86 +179,4 @@ export function audit(members, schedule, timeSlots, cfg) {
       if (dh > cfg.maxDailyHours + 1e-9) issues.push({ level: "warn", text: `${n} · ${day} ${dh}h (하루 한도 ${cfg.maxDailyHours}h)` });
   }
   return issues;
-}
-
-// 이미 배정된 시간 합계. 지금 채우려는 칸들은 어차피 덮어쓰므로 계산에서 뺀다
-function assignedHours(schedule, timeSlots, name, day, sis, fk) {
-  const target = new Set(sis);
-  let week = 0;
-  const byDay = {};
-  for (const d of DAYS) {
-    for (let si = 0; si < timeSlots.length; si++) {
-      for (const k of FLOOR_KEYS) {
-        if (d === day && k === fk && target.has(si)) continue;
-        if (schedule?.[d]?.[si]?.[k] !== name) continue;
-        week += timeSlots[si].hours;
-        byDay[d] = (byDay[d] || 0) + timeSlots[si].hours;
-      }
-    }
-  }
-  return { week, byDay };
-}
-
-// 그날 수업과 이 근무 덩어리가 gap 이내로 붙어 있나 (등교 한 번에 수업+근무를 몰아주는 실제 운영 패턴)
-function nearClass(m, day, s, e, gap = 2) {
-  return (m.classes || []).some(c => {
-    if (c.day !== day) return false;
-    const cs = c.startHour + c.startMin / 60, ce = c.endHour + c.endMin / 60;
-    return cs - e <= gap && s - ce <= gap;
-  });
-}
-
-/**
- * 한 자리(연속된 한 칸 이상)에 대한 후보 순위.
- * @param si 슬롯 인덱스 하나, 또는 드래그로 고른 여러 개
- * @returns [{ member, score, why[], conflicts[], warnings[], blocked[], remain, isCurrent }]
- *          conflicts = 배치 불가(수업·중복) / warnings = 규정 초과지만 사서 재량(한도·층) / blocked = 둘의 합
- */
-export function recommend(members, schedule, timeSlots, cfg, day, si, fk) {
-  const sis = (Array.isArray(si) ? [...si] : [si]).sort((a, b) => a - b);
-  const first = sis[0], last = sis[sis.length - 1];
-  const hours = sis.reduce((a, i) => a + timeSlots[i].hours, 0);
-  const startH = timeSlots[first].startH;
-  const endH = timeSlots[last].startH + timeSlots[last].hours;
-
-  const at = (i, k) => schedule?.[day]?.[i]?.[k] || null;
-  const here = sis.map(i => at(i, fk));
-  // 잔여시간은 한도 대비 비율이 아니라 절대 시간으로 잰다.
-  // 비율로 재면 주 40h와 20h인 두 사람이 똑같이 "100% 남음"이 되어, 채울 시간이 두 배인 쪽이 밀린다
-  const maxCap = Math.max(...members.map(m => capOf(m, cfg)), 1);
-
-  return members.map(m => {
-    const { week, byDay } = assignedHours(schedule, timeSlots, m.name, day, sis, fk);
-    const cap = capOf(m, cfg);
-    const dayH = byDay[day] || 0;
-
-    // 애초에 몸이 둘이 아니라 불가능한 것 — 넣지 못하게 막는다
-    const conflicts = [];
-    if (sis.some(i => isClassTime(m, day, i, timeSlots))) conflicts.push("수업 중");
-    if (sis.some(i => FLOOR_KEYS.some(k => k !== fk && at(i, k) === m.name))) conflicts.push("같은 시간 타 층");
-    // 규정을 넘지만 사서가 판단할 몫 — 알리기만 하고 막지 않는다
-    const warnings = [];
-    if (!floorAllowed(m, fk)) warnings.push(`${m.preferFloor1} 담당`);
-    if (week + hours > cap + 1e-9) warnings.push(`주 ${cap}h 초과`);
-    if (dayH + hours > cfg.maxDailyHours + 1e-9) warnings.push(`일 ${cfg.maxDailyHours}h 초과`);
-    const blocked = [...conflicts, ...warnings];
-
-    // 소프트 점수 — 근거로 그대로 보여줄 수 있는 것만 넣는다
-    let score = 0;
-    const why = [];
-    if (at(first - 1, fk) === m.name || at(last + 1, fk) === m.name) { score += 3; why.push("이어서 근무"); }
-    if (prefersFloor1(m, fk) || (!m.preferFloor1 && (fk === "f3a" || fk === "f3b"))) { score += 2; why.push("1순위 층"); }
-    else if (prefersFloor2(m, fk)) { score += 1; why.push("2순위 층"); }
-    const remain = cap - week;
-    score += (remain / maxCap) * 1.5;
-    if (nearClass(m, day, startH, endH)) { score += 0.5; why.push("수업과 붙음"); }
-    if (dayH > 0) { score += 0.5; why.push("그날 이미 출근"); }
-
-    return {
-      member: m, score, why, conflicts, warnings, blocked, remain,
-      isCurrent: here.every(n => n === m.name),
-    };
-  })
-    // 넣을 수 있는 사람 → 넣을 수는 있지만 한도를 넘는 사람 → 아예 못 넣는 사람 순
-    .sort((a, b) => tier(a) - tier(b) || b.score - a.score || a.member.name.localeCompare(b.member.name));
 }
