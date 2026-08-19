@@ -209,11 +209,11 @@ export default function ScheduleEditor({ members, schedule, setSchedule, pins, s
           <thead>
             <tr>
               <th className="th-time" rowSpan={2}>시간</th>
-              {DAYS.map(day => <th key={day} colSpan={4} className="th-day">{day}</th>)}
+              {DAYS.map((day, i) => <th key={day} colSpan={4} className={`th-day day-start ${i % 2 ? "alt" : ""}`}>{day}</th>)}
             </tr>
             <tr>
               {DAYS.flatMap(day => [
-                <th key={`${day}-f2`} className="th-floor">2층</th>,
+                <th key={`${day}-f2`} className="th-floor day-start">2층</th>,
                 <th key={`${day}-f3`} className="th-floor" colSpan={2}>3층</th>,
                 <th key={`${day}-f4`} className="th-floor">4층</th>,
               ])}
@@ -240,7 +240,7 @@ export default function ScheduleEditor({ members, schedule, setSchedule, pins, s
                       : false,
                   });
                   return [
-                    <ScheduleCell {...cellProps("f2")} />,
+                    <ScheduleCell {...cellProps("f2")} dayStart />,
                     <ScheduleCell {...cellProps("f3a")} />,
                     <ScheduleCell {...cellProps("f3b")} />,
                     <ScheduleCell {...cellProps("f4")} />,

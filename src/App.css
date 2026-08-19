@@ -134,6 +134,14 @@
 .rec-why em.rec-warn { color: #e65100; background: #fff3e0; }
 .rec-remain { font-size: 10.5px; color: #90a4ae; white-space: nowrap; font-variant-numeric: tabular-nums; }
 
+/* 요일 경계 — 한 요일은 4칸(2층·3층×2·4층)이라 경계가 없으면 어디서 요일이 바뀌는지 안 보인다.
+   nth-child 계산 대신 JSX에서 각 요일의 첫 칸에 .day-start를 붙인다 (열 구성이 바뀌어도 안 깨지게) */
+.sched-table:not(.class-table) .day-start { border-left: 3px solid #0d47a1; }
+.sched-table:not(.class-table) tr > *:last-child { border-right: 3px solid #0d47a1; }
+.sched-table .th-day { border-top: 3px solid #0d47a1; letter-spacing: 2px; }
+.sched-table .th-day.alt { background: #1565c0; }
+.sched-table .th-floor { border-bottom: 2px solid #64b5f6; }
+
 /* 드래그로 고르는 중인 칸 */
 .td-cell.sel-cell { outline: 2px solid #1976d2; outline-offset: -2px; background: #1976d215 !important; }
 .sched-table { user-select: none; }
