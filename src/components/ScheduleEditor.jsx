@@ -1,9 +1,11 @@
 import { useState, useMemo, useEffect } from "react";
 import { DAYS, FLOOR_KEYS, FLOOR_LABEL } from "../constants";
-import { isClassTime, sortedByName, isLunchSlot } from "../utils";
+import { isClassTime, isLunchSlot } from "../utils";
 import { recommend, audit } from "../recommend";
 import ScheduleCell from "./ScheduleCell";
 import ClassTimetable from "./ClassTimetable";
+import StatsPanel from "./StatsPanel";
+import { memberStats } from "../stats";
 
 export default function ScheduleEditor({ members, schedule, setSchedule, pins, setPins, onRegenerate, onExport, onBack, timeSlots, cfg }) {
   const [editCell, setEditCell] = useState(null);   // { day, fk, sis:[슬롯…] } — 드래그로 여러 칸 선택 가능
@@ -12,6 +14,7 @@ export default function ScheduleEditor({ members, schedule, setSchedule, pins, s
   const [regenerating, setRegenerating] = useState(false);
   const [showClasses, setShowClasses] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
+  const [showStats, setShowStats] = useState(false);
 
   // 표의 열 = 요일 × 층. 드래그는 이 열 축과 시간 축으로 이루어진 사각 영역이다
   // (세로 한 줄, 여러 요일 가로지르기, 대각선 모두 같은 규칙으로 처리된다)
@@ -73,34 +76,8 @@ export default function ScheduleEditor({ members, schedule, setSchedule, pins, s
     setTimeout(() => { onRegenerate(); setRegenerating(false); }, 30);
   };
 
-  const weeklyMap = useMemo(() => {
-    const map = {};
-    members.forEach(m => { map[m.name] = 0; });
-    DAYS.forEach(day => {
-      timeSlots.forEach((slot, si) => {
-        FLOOR_KEYS.forEach(fk => {
-          const n = schedule[day]?.[si]?.[fk];
-          if (n && map[n] !== undefined) map[n] += slot.hours;
-        });
-      });
-    });
-    return map;
-  }, [members, schedule, timeSlots]);
-
-  const nightHourMap = useMemo(() => {
-    const map = {};
-    members.forEach(m => { map[m.name] = 0; });
-    DAYS.forEach(day => {
-      timeSlots.forEach((slot, si) => {
-        if (slot.startH < 17) return;
-        FLOOR_KEYS.forEach(fk => {
-          const n = schedule[day]?.[si]?.[fk];
-          if (n && map[n] !== undefined) map[n] += slot.hours;
-        });
-      });
-    });
-    return map;
-  }, [members, schedule, timeSlots]);
+  // 주간 바와 통계가 같은 집계를 쓴다 (계산이 갈라지면 화면마다 숫자가 달라진다)
+  const stats = useMemo(() => memberStats(members, schedule, timeSlots, cfg), [members, schedule, timeSlots, cfg]);
 
   // 열려 있는 자리에 대한 후보 순위 — 판단은 사서가, 근거는 도구가
   const recommended = useMemo(
@@ -169,10 +146,7 @@ export default function ScheduleEditor({ members, schedule, setSchedule, pins, s
         </div>
       </div>
       <div className="weekly-bar">
-        {sortedByName(members).map(m => {
-          const maxW = m.weeklyHours ?? cfg.maxWeeklyHours;
-          const h = weeklyMap[m.name] || 0;
-          const nh = nightHourMap[m.name] || 0;
+        {stats.rows.map(({ member: m, week: h, evening: nh, cap: maxW }) => {
           const over = h > maxW;
           const fillPct = Math.min(h / maxW * 100, 100);
           const nightPct = h > 0 ? (nh / h) * fillPct : 0;
@@ -306,6 +280,7 @@ export default function ScheduleEditor({ members, schedule, setSchedule, pins, s
           {regenerating ? "⏳ 채우는 중..." : `🪄 빈칸 채우기${pinCount > 0 ? ` (📌${pinCount}칸 유지)` : ""}`}
         </button>
         <button className="btn-back" onClick={() => setShowClasses(true)}>📚 수업시간표</button>
+        <button className="btn-back" onClick={() => setShowStats(true)}>📊 통계</button>
         {pinCount > 0 && (
           <button className="btn-back" style={{ color: "#f57f17", borderColor: "#f9a825" }}
             onClick={() => setPins({})}>📌 전체 고정 해제</button>
@@ -315,6 +290,7 @@ export default function ScheduleEditor({ members, schedule, setSchedule, pins, s
         <button className="btn-export" onClick={onExport}>📥 엑셀 다운로드</button>
       </div>
       {showClasses && <ClassTimetable members={members} cfg={cfg} onClose={() => setShowClasses(false)} />}
+      {showStats && <StatsPanel members={members} schedule={schedule} timeSlots={timeSlots} cfg={cfg} onClose={() => setShowStats(false)} />}
       {confirmClear && (
         <div className="cell-popup-overlay" onClick={() => setConfirmClear(false)}>
           <div className="cell-popup" onClick={e => e.stopPropagation()} style={{ maxWidth: 340, textAlign: "center" }}>

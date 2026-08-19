@@ -207,3 +207,24 @@
 .sub-chip { display: flex; align-items: center; gap: 6px; background: #e3f2fd; border: 1px solid; border-radius: 8px; padding: 4px 10px; font-size: 12px; }
 .sub-chip-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
 .sub-empty { font-size: 12px; color: #90a4ae; text-align: center; padding: 6px 0; }
+
+/* 근무시간 통계 */
+.stat-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin-bottom: 12px; }
+.stat-card { background: #e3f2fd; border-radius: 10px; padding: 10px 14px; display: flex; flex-direction: column; gap: 2px; }
+.stat-card.accent { background: #1976d2; }
+.stat-card.accent span, .stat-card.accent em { color: #ffffffaa; }
+.stat-card.accent strong { color: #fff; }
+.stat-card span { font-size: 11px; color: #607d8b; }
+.stat-card strong { font-size: 20px; color: #1565c0; font-variant-numeric: tabular-nums; }
+.stat-card em { font-style: normal; font-size: 10.5px; color: #90a4ae; }
+.stat-table td, .stat-table th { padding: 5px 6px; }
+.stat-table .th-day { font-size: 12px; letter-spacing: 0; }
+.stat-num { font-size: 12.5px; color: #37474f; font-variant-numeric: tabular-nums; }
+.stat-num.strong { font-weight: 700; color: #1565c0; }
+.stat-num.zero { color: #cfd8dc; }
+.stat-sub { display: block; font-size: 10px; color: #90a4ae; font-weight: 400; }
+.stat-bar { height: 4px; background: #e0e0e0; border-radius: 2px; overflow: hidden; margin: 3px 0 2px; }
+.stat-bar.sm { height: 3px; }
+.stat-bar i { display: block; height: 100%; }
+.stat-over { color: #c62828; font-weight: 700; }
+.stat-table tfoot td { background: #e3f2fd; border-top: 2px solid #1976d2; }
