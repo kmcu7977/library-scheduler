@@ -14,12 +14,16 @@
 .btn-reset { background: none; border: 1px solid #ffffff40; border-radius: 8px; color: #ffffffaa; padding: 6px 14px; font-size: 13px; font-family: inherit; cursor: pointer; transition: all .2s; }
 .btn-reset:hover { border-color: #fca5a5; color: #fca5a5; }
 .step-indicator { display: flex; gap: 24px; align-items: center; flex-wrap: wrap; }
-.step-dot { display: flex; align-items: center; gap: 8px; opacity: .4; transition: opacity .3s; }
+.step-dot { display: flex; align-items: center; gap: 8px; opacity: .62; transition: opacity .2s; }
 .step-dot.current, .step-dot.done { opacity: 1; }
+/* 아직 안 지난 단계도 눌러서 건너뛸 수 있다 — 인원이 없어 잠긴 단계만 흐리게 */
+.step-dot:hover { opacity: 1; }
+.step-dot.locked { opacity: .3; }
+.step-dot.locked:hover { opacity: .3; }
 .step-dot span { width: 26px; height: 26px; border-radius: 50%; background: #1976d280; border: 2px solid #64b5f6; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #fff; }
 .step-dot.current span { border-color: #fff; background: #ffffff25; }
 .step-dot.done span { background: #7dd3fc; border-color: #7dd3fc; color: #1565c0; }
-.step-dot label { font-size: 13px; font-weight: 500; color: #ffffffcc; cursor: default; }
+.step-dot label { font-size: 13px; font-weight: 500; color: #ffffffcc; cursor: inherit; }
 .app-main { padding: 32px 20px; display: flex; justify-content: center; }
 .step-card { background: #ffffff; border: 1px solid #bae0f7; border-radius: 18px; padding: 32px; width: 100%; max-width: 640px; box-shadow: 0 4px 24px #0ea5e920; }
 .step-card.wide { max-width: calc(100vw - 40px); }
@@ -141,6 +145,10 @@
 .sched-table .th-day { border-top: 3px solid #0d47a1; letter-spacing: 2px; }
 .sched-table .th-day.alt { background: #1565c0; }
 .sched-table .th-floor { border-bottom: 2px solid #64b5f6; }
+
+/* 점심시간 칸 — 시간 열도 같은 색으로 묶어 한 덩어리로 보이게 한다 */
+.sched-table .lunch-cell { border-top-color: #e0a75e; border-bottom-color: #e0a75e; }
+.td-time.lunch-row { background: #ffe8c2; color: #8a4b00; font-weight: 700; }
 
 /* 드래그로 고르는 중인 칸 */
 .td-cell.sel-cell { outline: 2px solid #1976d2; outline-offset: -2px; background: #1976d215 !important; }

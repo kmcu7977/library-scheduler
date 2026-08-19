@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { DAYS, FLOOR_KEYS, FLOOR_LABEL } from "../constants";
-import { isClassTime, sortedByName } from "../utils";
+import { isClassTime, sortedByName, isLunchSlot } from "../utils";
 import { recommend, audit } from "../recommend";
 import ScheduleCell from "./ScheduleCell";
 import ClassTimetable from "./ClassTimetable";
@@ -222,13 +222,14 @@ export default function ScheduleEditor({ members, schedule, setSchedule, pins, s
           <tbody>
             {timeSlots.map((slot, si) => (
               <tr key={si}>
-                <td className="td-time">{slot.label}</td>
+                <td className={`td-time ${isLunchSlot(slot) ? "lunch-row" : ""}`}>{slot.label}</td>
                 {DAYS.flatMap(day => {
                   const cellProps = (fk) => ({
                     key: `${day}-${fk}`,
                     fk, day, si, members, schedule, timeSlots,
                     name: schedule[day]?.[si]?.[fk] || "",
                     pinned: isPinned(day, si, fk),
+                    lunch: isLunchSlot(slot),
                     active: inEdit(day, si, fk),
                     selected: inDrag(day, si, fk),
                     dragging: !!drag,

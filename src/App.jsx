@@ -113,6 +113,15 @@ export default function App() {
 
   const STEP_LABELS = ["운영 설정", "인원 등록", "수업 입력", "시간표"];
 
+  // 단계 이동은 앞뒤 모두 자유롭게. 다만 인원이 없으면 수업 입력·시간표는 볼 게 없어 막는다.
+  // 시간표로 바로 뛰어들 때는 표가 준비되어 있어야 하므로 handleGenerate를 거친다
+  const canGoStep = i => i <= 1 || members.length > 0;
+  const goStep = i => {
+    if (!canGoStep(i)) return;
+    if (i === 3) handleGenerate();
+    else setStep(i);
+  };
+
   if (loadStatus === "loading") return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "#e8f4fd", color: "#1976d2", fontSize: 16, fontFamily: "Noto Sans KR, sans-serif" }}>
       불러오는 중...
@@ -144,9 +153,10 @@ export default function App() {
         </div>
         <div className="step-indicator">
           {STEP_LABELS.map((s, i) => (
-            <div key={i} className={`step-dot ${step === i ? "current" : step > i ? "done" : ""}`}
-              style={{ cursor: step > i ? "pointer" : "default" }}
-              onClick={() => step > i && setStep(i)}>
+            <div key={i} className={`step-dot ${step === i ? "current" : step > i ? "done" : ""} ${canGoStep(i) ? "" : "locked"}`}
+              style={{ cursor: canGoStep(i) && step !== i ? "pointer" : "default" }}
+              title={canGoStep(i) ? "" : "인원을 먼저 등록해주세요"}
+              onClick={() => step !== i && goStep(i)}>
               <span>{i === 0 ? "⓪" : i}</span>
               <label>{s}</label>
             </div>
