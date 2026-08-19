@@ -11,7 +11,11 @@ export default function ClassTimetable({ members, cfg, onClose }) {
   const shown = picked.length ? roster.filter(m => picked.includes(m.name)) : roster;
   const toggle = name => setPicked(p => (p.includes(name) ? p.filter(x => x !== name) : [...p, name]));
 
-  const { days, hours, grid, noClass } = useMemo(() => {
+  // 보기 전환 — 수업 중인 사람 / 그 시간에 비어 있는 사람.
+  // 배치할 때 실제로 궁금한 건 후자라서 칸 내용을 통째로 뒤집는다
+  const [mode, setMode] = useState("class");
+
+  const { days, hours, grid, freeGrid, noClass } = useMemo(() => {
     const items = shown.flatMap(m => (m.classes || []).map(c => ({ ...c, name: m.name, color: m.color })));
 
     // 주말 수업은 있을 때만 열을 만든다 (근무는 월~금이지만 수업은 볼 수 있어야 하므로)
@@ -25,16 +29,19 @@ export default function ClassTimetable({ members, cfg, onClose }) {
     const hours = [];
     for (let h = from; h < to; h++) hours.push(h);
 
-    // grid[요일][시각] = 그 한 시간에 걸치는 수업들
-    const grid = {};
+    // grid[요일][시각] = 그 한 시간에 걸치는 수업들 / freeGrid = 그 시간에 수업이 없는 사람들
+    const grid = {}, freeGrid = {};
     for (const d of days) {
       grid[d] = {};
+      freeGrid[d] = {};
       for (const h of hours) {
         grid[d][h] = items.filter(c =>
           c.day === d && c.startHour + c.startMin / 60 < h + 1 && c.endHour + c.endMin / 60 > h);
+        const busy = new Set(grid[d][h].map(c => c.name));
+        freeGrid[d][h] = shown.filter(m => !busy.has(m.name));
       }
     }
-    return { days, hours, grid, noClass: shown.filter(m => !(m.classes || []).length) };
+    return { days, hours, grid, freeGrid, noClass: shown.filter(m => !(m.classes || []).length) };
   }, [roster, picked, cfg]); // shown은 이 둘에서 파생된다
 
   const fmt = c => `${c.startHour}:${String(c.startMin).padStart(2, "0")}~${c.endHour}:${String(c.endMin).padStart(2, "0")}`;
@@ -44,7 +51,13 @@ export default function ClassTimetable({ members, cfg, onClose }) {
       <div className="cell-popup class-modal" onClick={e => e.stopPropagation()}>
         <div className="class-modal-head">
           <h3 style={{ margin: 0, fontSize: 15, color: "#1976d2" }}>📚 학생 수업시간표</h3>
-          <button className="btn-back" style={{ padding: "6px 14px" }} onClick={onClose}>닫기</button>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <div className="mode-switch">
+              <button className={mode === "class" ? "on" : ""} onClick={() => setMode("class")}>수업 중</button>
+              <button className={mode === "free" ? "on" : ""} onClick={() => setMode("free")}>비어 있는 사람</button>
+            </div>
+            <button className="btn-back" style={{ padding: "6px 14px" }} onClick={onClose}>닫기</button>
+          </div>
         </div>
         <div className="class-filter">
           <button className={"class-pick" + (picked.length === 0 ? " on" : "")}
@@ -77,13 +90,23 @@ export default function ClassTimetable({ members, cfg, onClose }) {
                   <td className="td-time">{String(h).padStart(2, "0")}:00~{String(h + 1).padStart(2, "0")}:00</td>
                   {days.map(d => (
                     <td key={d} className="td-class">
-                      {grid[d][h].map((c, i) => (
-                        <span key={i} className="class-chip"
-                          style={{ background: (c.color || "#90a4ae") + "26", color: c.color || "#546e7a" }}
-                          title={`${c.name} · ${fmt(c)}`}>
-                          {c.name}
-                        </span>
-                      ))}
+                      {mode === "class"
+                        ? grid[d][h].map((c, i) => (
+                          <span key={i} className="class-chip"
+                            style={{ background: (c.color || "#90a4ae") + "26", color: c.color || "#546e7a" }}
+                            title={`${c.name} · ${fmt(c)}`}>
+                            {c.name}
+                          </span>
+                        ))
+                        : freeGrid[d][h].length === 0
+                          ? <span className="class-none">전원 수업</span>
+                          : freeGrid[d][h].map(m => (
+                            <span key={m.name} className="class-chip"
+                              style={{ background: (m.color || "#90a4ae") + "26", color: m.color || "#546e7a" }}
+                              title={`${m.name} · 이 시간 수업 없음`}>
+                              {m.name}
+                            </span>
+                          ))}
                     </td>
                   ))}
                 </tr>
@@ -92,8 +115,17 @@ export default function ClassTimetable({ members, cfg, onClose }) {
           </table>
         </div>
         <p className="class-foot">
-          칸에 있는 학생은 그 시간에 <b>수업 중</b>이라 근무를 넣을 수 없습니다.
-          {noClass.length > 0 && <> · 수업 미입력: {noClass.map(m => m.name).join(", ")}</>}
+          {mode === "class"
+            ? <>칸에 있는 학생은 그 시간에 <b>수업 중</b>이라 근무를 넣을 수 없습니다.</>
+            : <>칸에 있는 학생은 그 시간에 <b>수업이 없어</b> 근무를 넣을 수 있습니다.</>}
+          {noClass.length > 0 && (
+            mode === "free"
+              ? <span style={{ display: "block", marginTop: 4, color: "#e65100" }}>
+                  ⚠️ 수업을 입력하지 않은 <b>{noClass.length}명</b>({noClass.map(m => m.name).join(", ")})은
+                  모든 시간에 비어 있는 것으로 나옵니다. 실제로 비는지는 확인이 필요합니다.
+                </span>
+              : <> · 수업 미입력: {noClass.map(m => m.name).join(", ")}</>
+          )}
         </p>
       </div>
     </div>
