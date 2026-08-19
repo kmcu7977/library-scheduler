@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { FLOOR_OPTIONS, DEFAULT_COLORS, EMPTY_INFO, WEEKLY_HOURS_OPTIONS } from "../constants";
 
 export default function MemberSetup({ members, setMembers, onNext, onBack }) {
@@ -6,6 +6,9 @@ export default function MemberSetup({ members, setMembers, onNext, onBack }) {
   const [editTarget, setEditTarget] = useState(null);
   const [editInfo, setEditInfo] = useState({ ...EMPTY_INFO, preferFloor1: null, preferFloor2: null, weeklyHours: WEEKLY_HOURS_OPTIONS[0] });
   const upForm = (f, v) => setForm(prev => ({ ...prev, [f]: v }));
+
+  // 목록은 가나다순으로만 보여준다. 저장 순서는 그대로 둬야 색 배정(등록 순서 기준)이 흔들리지 않는다
+  const sorted = useMemo(() => [...members].sort((a, b) => a.name.localeCompare(b.name, "ko")), [members]);
 
   const addMember = () => {
     const n = form.name.trim();
@@ -71,7 +74,7 @@ export default function MemberSetup({ members, setMembers, onNext, onBack }) {
             <span style={{ minWidth: 96, fontSize: 11, color: "#78909c", textAlign: "center" }}>주 근무시간</span>
             <span style={{ minWidth: 28 }} />
           </div>
-          {members.map((m, idx) => (
+          {sorted.map((m, idx) => (
             <div key={m.name} className="pref-table-row" style={{ borderLeft: `3px solid ${m.color}` }}>
               <span style={{ minWidth: 24, fontSize: 12, color: "#546e7a" }}>{idx + 1}</span>
               <span className="pref-col-name" style={{ color: m.color, fontWeight: 700, cursor: "pointer" }}
