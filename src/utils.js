@@ -39,6 +39,11 @@ export function getAvailableMembers(members, day, si, timeSlots) {
   return members.filter(m => !isClassTime(m, day, si, timeSlots));
 }
 
+// 인원을 사람에게 보여줄 때는 항상 가나다순. 저장 배열 자체는 등록 순서를 유지한다
+// (색 배정이 등록 순서 기준이라 데이터를 정렬하면 흔들린다)
+export const compareByName = (a, b) => a.name.localeCompare(b.name, "ko");
+export const sortedByName = members => [...members].sort(compareByName);
+
 // 2층 선호자는 4층 금지, 4층 선호자는 2층 금지 (3층은 누구나). 단 본인이 2순위로 고른 층이면 허용
 // scheduler.js(자동배치)와 recommend.js(추천)가 같은 규칙을 써야 하므로 여기 한 곳에만 둔다
 export const floorAllowed = (member, key) => {

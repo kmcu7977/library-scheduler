@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { DAYS, FLOOR_KEYS, FLOOR_LABEL } from "../constants";
-import { isClassTime } from "../utils";
+import { isClassTime, sortedByName } from "../utils";
 import { recommend, audit } from "../recommend";
 import ScheduleCell from "./ScheduleCell";
 import ClassTimetable from "./ClassTimetable";
@@ -127,7 +127,7 @@ export default function ScheduleEditor({ members, schedule, setSchedule, pins, s
         </div>
       </div>
       <div className="weekly-bar">
-        {members.map(m => {
+        {sortedByName(members).map(m => {
           const maxW = m.weeklyHours ?? cfg.maxWeeklyHours;
           const h = weeklyMap[m.name] || 0;
           const nh = nightHourMap[m.name] || 0;

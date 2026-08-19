@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { FLOOR_OPTIONS, DEFAULT_COLORS, EMPTY_INFO, WEEKLY_HOURS_OPTIONS } from "../constants";
+import { sortedByName } from "../utils";
 
 export default function MemberSetup({ members, setMembers, onNext, onBack }) {
   const [form, setForm] = useState({ name: "", ...EMPTY_INFO, weeklyHours: WEEKLY_HOURS_OPTIONS[0] });
@@ -7,8 +8,7 @@ export default function MemberSetup({ members, setMembers, onNext, onBack }) {
   const [editInfo, setEditInfo] = useState({ ...EMPTY_INFO, preferFloor1: null, preferFloor2: null, weeklyHours: WEEKLY_HOURS_OPTIONS[0] });
   const upForm = (f, v) => setForm(prev => ({ ...prev, [f]: v }));
 
-  // 목록은 가나다순으로만 보여준다. 저장 순서는 그대로 둬야 색 배정(등록 순서 기준)이 흔들리지 않는다
-  const sorted = useMemo(() => [...members].sort((a, b) => a.name.localeCompare(b.name, "ko")), [members]);
+  const sorted = useMemo(() => sortedByName(members), [members]);
 
   const addMember = () => {
     const n = form.name.trim();

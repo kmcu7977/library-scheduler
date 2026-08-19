@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { DAYS_KR } from "../constants";
+import { sortedByName } from "../utils";
 
 export default function ClassSetup({ members, setMembers, onNext, onBack }) {
   const [selected, setSelected] = useState(members[0]?.name || "");
@@ -14,7 +15,7 @@ export default function ClassSetup({ members, setMembers, onNext, onBack }) {
       <h2 className="step-title">② 수업시간 입력</h2>
       <p className="step-desc">수업 시간은 자동 배치 제외 및 대체 인원 계산에 사용됩니다.</p>
       <div className="tab-row">
-        {members.map(m => (
+        {sortedByName(members).map(m => (
           <button key={m.name} className={`tab-btn ${selected === m.name ? "active" : ""}`}
             style={selected === m.name ? { borderBottom: `3px solid ${m.color}`, color: m.color } : {}}
             onClick={() => setSelected(m.name)}>{m.name}</button>

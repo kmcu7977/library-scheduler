@@ -1,4 +1,5 @@
 import * as XLSX from "xlsx";
+import { sortedByName } from "./utils";
 import { DAYS, FLOOR_KEYS } from "./constants";
 
 export function exportToExcel(schedule, members, timeSlots, cfg) {
@@ -18,13 +19,13 @@ export function exportToExcel(schedule, members, timeSlots, cfg) {
   XLSX.utils.book_append_sheet(wb, ws, "근무시간표");
 
   const ws_roster = [["연번","구분","학과","학번","이름","연락처","비고"]];
-  members.forEach((m, i) => ws_roster.push([i + 1, "도서관", m.dept||"", m.studentId||"", m.name, m.phone||"", m.note||""]));
+  sortedByName(members).forEach((m, i) => ws_roster.push([i + 1, "도서관", m.dept||"", m.studentId||"", m.name, m.phone||"", m.note||""]));
   const wsR = XLSX.utils.aoa_to_sheet(ws_roster);
   wsR["!cols"] = [{ wch: 6 },{ wch: 8 },{ wch: 22 },{ wch: 10 },{ wch: 8 },{ wch: 14 },{ wch: 18 }];
   XLSX.utils.book_append_sheet(wb, wsR, "장학생명단");
 
   const ws_sum = [["이름","학과","학번","주간 근로시간","주간 한도","잔여","일일 한도"]];
-  members.forEach(m => {
+  sortedByName(members).forEach(m => {
     let total = 0;
     DAYS.forEach(day => timeSlots.forEach((slot, si) => FLOOR_KEYS.forEach(fk => { if (schedule[day]?.[si]?.[fk] === m.name) total += slot.hours; })));
     ws_sum.push([m.name, m.dept||"", m.studentId||"", total, cfg.maxWeeklyHours, cfg.maxWeeklyHours - total, cfg.maxDailyHours]);

@@ -1,12 +1,14 @@
 import { useMemo, useState } from "react";
 import { DAYS, DAYS_KR } from "../constants";
+import { sortedByName } from "../utils";
 
 // 학생 전원의 수업을 한 장에 겹쳐 본다.
 // 근무표와 같은 요일×시간 축을 쓴다 — 축이 달라지면 "이 시간에 누가 비나"를 눈으로 못 맞춘다.
 export default function ClassTimetable({ members, cfg, onClose }) {
   // 인원 필터 — 비어 있으면 전원. 몇 명만 남기면 그 사람들 시간이 겹치는지 바로 보인다
   const [picked, setPicked] = useState([]);
-  const shown = picked.length ? members.filter(m => picked.includes(m.name)) : members;
+  const roster = useMemo(() => sortedByName(members), [members]);
+  const shown = picked.length ? roster.filter(m => picked.includes(m.name)) : roster;
   const toggle = name => setPicked(p => (p.includes(name) ? p.filter(x => x !== name) : [...p, name]));
 
   const { days, hours, grid, noClass } = useMemo(() => {
@@ -33,7 +35,7 @@ export default function ClassTimetable({ members, cfg, onClose }) {
       }
     }
     return { days, hours, grid, noClass: shown.filter(m => !(m.classes || []).length) };
-  }, [members, picked, cfg]); // shown은 이 둘에서 파생된다
+  }, [roster, picked, cfg]); // shown은 이 둘에서 파생된다
 
   const fmt = c => `${c.startHour}:${String(c.startMin).padStart(2, "0")}~${c.endHour}:${String(c.endMin).padStart(2, "0")}`;
 
@@ -50,7 +52,7 @@ export default function ClassTimetable({ members, cfg, onClose }) {
             onClick={() => setPicked([])}>
             전체 {members.length}명
           </button>
-          {members.map(m => {
+          {roster.map(m => {
             const on = picked.includes(m.name);
             return (
               <button key={m.name} className={"class-pick" + (on ? " on" : "")}
