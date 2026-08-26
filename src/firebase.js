@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getDatabase, ref, set, get } from "firebase/database";
+import { getDatabase, ref, set, get, onValue } from "firebase/database";
 
 const firebaseConfig = {
   apiKey:            "AIzaSyBfMCrCsoMUrJQW9zGpRZvVbcghRUHvMfw",
@@ -24,4 +24,10 @@ export async function loadFromFirebase() {
     const snap = await get(ref(db, DB_PATH));
     return snap.exists() ? snap.val() : null;
   } catch (e) { console.error("Firebase 불러오기 실패:", e); throw e; }
+}
+
+// 수업시간표 탭은 한 번 읽고 마는 get 대신 구독한다 —
+// 본 탭에서 수업을 고치는 즉시 따라와야 두 탭을 나란히 놓고 볼 수 있다. 반환값은 구독 해제 함수
+export function subscribeToFirebase(onData, onError) {
+  return onValue(ref(db, DB_PATH), snap => onData(snap.exists() ? snap.val() : null), onError);
 }
