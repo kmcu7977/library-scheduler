@@ -48,6 +48,10 @@
 .min-btn.active { background: #1976d220; border-color: #1976d2; color: #1976d2; font-weight: 700; }
 .min-btn:hover { border-color: #1976d2; }
 .cfg-colon { font-size: 13px; color: #78909c; }
+.cfg-text { flex: 1; margin-left: 12px; background: #fff; border: 1px solid #90caf9; border-radius: 8px; color: #1a2a3a; padding: 6px 10px; font-size: 13px; font-family: inherit; outline: none; min-width: 0; }
+.cfg-text:focus { border-color: #1976d2; }
+.cfg-text::placeholder { color: #90a4ae; }
+.cfg-hint { font-size: 11px; color: #5a6480; line-height: 1.5; }
 .cfg-summary { margin-top: 16px; padding-top: 14px; border-top: 1px solid #b3d9f5; display: flex; flex-direction: column; gap: 8px; }
 .cfg-summary-item { display: flex; justify-content: space-between; font-size: 13px; }
 .cfg-summary-item span { color: #607d8b; } .cfg-summary-item strong { color: #1565c0; }

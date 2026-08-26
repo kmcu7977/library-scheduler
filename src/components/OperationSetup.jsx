@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { PRESETS } from "../constants";
 import { buildTimeSlots } from "../utils";
+import { defaultTitle, defaultEffectiveDate } from "../exporter";
 
 export default function OperationSetup({ cfg, onNext }) {
   const [preset, setPreset] = useState(null);
@@ -15,9 +16,11 @@ export default function OperationSetup({ cfg, onNext }) {
       return next;
     });
   };
+  const updateText = (field, val) => { setPreset(null); setLocalCfg(prev => ({ ...prev, [field]: val })); };
   const applyPreset = key => {
     setPreset(key);
-    const p = { ...PRESETS[key], slotMins: 60 };
+    // 제목·시행일은 운영 시간 프리셋과 무관하므로 덮어쓰지 않는다
+    const p = { ...PRESETS[key], slotMins: 60, title: localCfg.title, effectiveDate: localCfg.effectiveDate };
     p.firstSlotMins = calcFirstSlot(p.openMin);
     setLocalCfg(p);
   };
@@ -85,6 +88,20 @@ export default function OperationSetup({ cfg, onNext }) {
             </div>
           </div>
         </div>
+      </div>
+      <div className="cfg-section" style={{ marginTop: 16 }}>
+        <div className="cfg-section-title">📄 엑셀 제목줄</div>
+        {[
+          { field: "title", label: "제목", ph: defaultTitle() },
+          { field: "effectiveDate", label: "시행일", ph: defaultEffectiveDate() },
+        ].map(({ field, label, ph }) => (
+          <div key={field} className="cfg-row">
+            <label className="cfg-label">{label}</label>
+            <input type="text" className="cfg-text" placeholder={ph}
+              value={localCfg[field] ?? ""} onChange={e => updateText(field, e.target.value)} />
+          </div>
+        ))}
+        <div className="cfg-hint">비워두면 오늘 날짜로 자동 작성됩니다 (예: {defaultTitle()})</div>
       </div>
       <div className="preview-section">
         <div className="preview-title">📋 시간 슬롯 미리보기</div>
