@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { DAYS, PRESETS } from "./constants";
 import { saveToFirebase, loadFromFirebase } from "./firebase";
-import { buildTimeSlots } from "./utils";
+import { buildTimeSlots, restoreIndexed } from "./utils";
 import { autoSchedule } from "./scheduler";
 import { exportToExcel } from "./exporter";
 import OperationSetup from "./components/OperationSetup";
@@ -22,43 +22,51 @@ export default function App() {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const loadedRef = useRef(false);
 
+  // 저장된 한 벌을 화면 상태로 되돌린다. 처음 불러올 때와 "보관해둔 버전 불러오기"가
+  // 같은 경로를 타야 한쪽만 고쳐지는 일이 없다
+  const applyData = data => {
+    const nextCfg = data.cfg || PRESETS.semester;
+    const ts = buildTimeSlots(nextCfg);
+    setCfg(nextCfg);
+    setTimeSlots(ts);
+
+    const savedMembers = Array.isArray(data.members) ? data.members : Object.values(data.members || {});
+    // 예전 데이터 이관: "야간 학생" 플래그는 사실상 주 근무시간 구분이었다 → weeklyHours로 옮긴다
+    setMembers(savedMembers.map(m => {
+      if (m.weeklyHours) return m;
+      const { isNight, timeSlot, ...rest } = m;
+      // 예전 야간 한도(30h 등)를 그대로 옮기면 20/40 선택지 어디에도 안 걸려 화면에 표시되지 않는다
+      return { ...rest, weeklyHours: isNight ? 40 : (nextCfg.maxWeeklyHours ?? 20) };
+    }));
+
+    // 전 층이 빈 시간대는 Firebase가 통째로 빼고 돌려준다 — 인덱스를 살려 되돌린다(restoreIndexed)
+    setSchedule(data.schedule
+      ? Object.fromEntries(DAYS.map(day => [day, restoreIndexed(data.schedule[day], ts.length)]))
+      : null);
+
+    const restoredPins = {};
+    DAYS.forEach(day => {
+      const p = data.pins?.[day];
+      if (!p) return;
+      const entries = Array.isArray(p) ? p.map((v, i) => [i, v]) : Object.entries(p);
+      const dayPins = {};
+      entries.forEach(([si, byFloor]) => { if (byFloor) dayPins[si] = byFloor; });
+      if (Object.keys(dayPins).length) restoredPins[day] = dayPins;
+    });
+    setPins(restoredPins);
+  };
+
   useEffect(() => {
     loadFromFirebase().then(data => {
-      if (data) {
-        if (data.cfg)     { setCfg(data.cfg); setTimeSlots(buildTimeSlots(data.cfg)); }
-        // 예전 데이터 이관: "야간 학생" 플래그는 사실상 주 근무시간 구분이었다 → weeklyHours로 옮긴다
-        if (data.members) setMembers(data.members.map(m => {
-          if (m.weeklyHours) return m;
-          const { isNight, timeSlot, ...rest } = m;
-          // 예전 야간 한도(30h 등)를 그대로 옮기면 20/40 선택지 어디에도 안 걸려 화면에 표시되지 않는다
-          return { ...rest, weeklyHours: isNight ? 40 : (data.cfg?.maxWeeklyHours ?? 20) };
-        }));
-        if (data.schedule) {
-          const restored = {};
-          DAYS.forEach(day => {
-            restored[day] = Array.isArray(data.schedule[day])
-              ? data.schedule[day]
-              : Object.values(data.schedule[day] || {});
-          });
-          setSchedule(restored);
-        }
-        if (data.pins) {
-          // Firebase는 연속 숫자 키 객체를 배열로 되돌릴 수 있어 정규화
-          const restoredPins = {};
-          DAYS.forEach(day => {
-            const p = data.pins[day];
-            if (!p) return;
-            const entries = Array.isArray(p) ? p.map((v, i) => [i, v]) : Object.entries(p);
-            const dayPins = {};
-            entries.forEach(([si, byFloor]) => { if (byFloor) dayPins[si] = byFloor; });
-            if (Object.keys(dayPins).length) restoredPins[day] = dayPins;
-          });
-          setPins(restoredPins);
-        }
-      }
+      if (data) applyData(data);
       loadedRef.current = true;
       setLoadStatus("done");
-    }).catch(() => setLoadStatus("error"));
+    }).catch(e => {
+      // 연결 실패든 되돌리는 중 터진 오류든 화면은 같은 문구를 보여준다 —
+      // 어느 쪽인지는 콘솔에 남겨야 나중에 원인을 찾을 수 있다
+      console.error("불러오기 실패:", e);
+      setLoadStatus("error");
+    });
   }, []);
 
   useEffect(() => {
@@ -172,6 +180,7 @@ export default function App() {
           <ScheduleEditor members={members} schedule={schedule} setSchedule={setSchedule}
             pins={pins} setPins={setPins} onRegenerate={handleRegenerate}
             onExport={() => exportToExcel(schedule, members, timeSlots, cfg)}
+            onRestore={applyData}
             onBack={() => setStep(2)} timeSlots={timeSlots} cfg={cfg} />
         )}
       </main>

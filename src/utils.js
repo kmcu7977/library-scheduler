@@ -57,3 +57,17 @@ export const prefersFloor2 = (member, key) => member.preferFloor2 ? member.prefe
 export const isLunchSlot     = slot => slot.startH >= 12 && slot.startH < 14;
 export const isAfternoonSlot = slot => slot.startH >= 14;
 export const isMorningSlot   = slot => slot.startH < 12;
+
+// Firebase는 배열에서 값이 통째로 빈 자리를 빼고 돌려준다.
+// 시간표에서 한 시간대의 네 층이 모두 비면 그 시간대가 통째로 사라지는데,
+// 이때 Object.values로 펴면 뒤 시간대가 한 칸씩 당겨져 시간표 전체가 어긋난다.
+// (실데이터에도 전 층이 비는 시간대가 이미 있다 — 인덱스를 그대로 살려 되돌려야 한다)
+export function restoreIndexed(saved, length) {
+  // 배열로 올 때 빠진 자리는 null이 아니라 "구멍"이다. map은 구멍을 건너뛰어 그대로 남기고,
+  // 그 구멍을 for...of로 훑으면 undefined가 나와 터진다 — Array.from은 구멍도 빈 값으로 채워 훑는다
+  const entries = Array.isArray(saved) ? Array.from(saved, (v, i) => [i, v]) : Object.entries(saved || {});
+  const size = Math.max(length || 0, ...entries.map(([i]) => +i + 1), 0);
+  const out = Array.from({ length: size }, () => null);
+  for (const [i, v] of entries) out[+i] = v ?? null;
+  return out;
+}

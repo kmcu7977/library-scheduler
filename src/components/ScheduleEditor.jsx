@@ -5,9 +5,10 @@ import { recommend, audit } from "../recommend";
 import ScheduleCell from "./ScheduleCell";
 import ClassTimetable from "./ClassTimetable";
 import StatsPanel from "./StatsPanel";
+import SnapshotPanel from "./SnapshotPanel";
 import { memberStats } from "../stats";
 
-export default function ScheduleEditor({ members, schedule, setSchedule, pins, setPins, onRegenerate, onExport, onBack, timeSlots, cfg }) {
+export default function ScheduleEditor({ members, schedule, setSchedule, pins, setPins, onRegenerate, onExport, onRestore, onBack, timeSlots, cfg }) {
   const [editCell, setEditCell] = useState(null);   // { day, fk, sis:[슬롯…] } — 드래그로 여러 칸 선택 가능
   const [drag, setDrag] = useState(null);           // { day, fk, from, to } — 드래그 진행 중
   const [hoveredMember, setHoveredMember] = useState(null);
@@ -15,6 +16,7 @@ export default function ScheduleEditor({ members, schedule, setSchedule, pins, s
   const [showClasses, setShowClasses] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
   const [showStats, setShowStats] = useState(false);
+  const [showSnaps, setShowSnaps] = useState(false);
 
   // 표의 열 = 요일 × 층. 드래그는 이 열 축과 시간 축으로 이루어진 사각 영역이다
   // (세로 한 줄, 여러 요일 가로지르기, 대각선 모두 같은 규칙으로 처리된다)
@@ -281,6 +283,7 @@ export default function ScheduleEditor({ members, schedule, setSchedule, pins, s
         </button>
         <button className="btn-back" onClick={() => setShowClasses(true)}>📚 수업시간표</button>
         <button className="btn-back" onClick={() => setShowStats(true)}>📊 통계</button>
+        <button className="btn-back" onClick={() => setShowSnaps(true)}>📦 버전 보관</button>
         {pinCount > 0 && (
           <button className="btn-back" style={{ color: "#f57f17", borderColor: "#f9a825" }}
             onClick={() => setPins({})}>📌 전체 고정 해제</button>
@@ -290,6 +293,7 @@ export default function ScheduleEditor({ members, schedule, setSchedule, pins, s
         <button className="btn-export" onClick={onExport}>📥 엑셀 다운로드</button>
       </div>
       {showClasses && <ClassTimetable members={members} cfg={cfg} onClose={() => setShowClasses(false)} />}
+      {showSnaps && <SnapshotPanel state={{ cfg, members, schedule, pins }} onRestore={onRestore} onClose={() => setShowSnaps(false)} />}
       {showStats && <StatsPanel members={members} schedule={schedule} timeSlots={timeSlots} cfg={cfg} onClose={() => setShowStats(false)} />}
       {confirmClear && (
         <div className="cell-popup-overlay" onClick={() => setConfirmClear(false)}>

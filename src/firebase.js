@@ -31,3 +31,22 @@ export async function loadFromFirebase() {
 export function subscribeToFirebase(onData, onError) {
   return onValue(ref(db, DB_PATH), snap => onData(snap.exists() ? snap.val() : null), onError);
 }
+
+// 사서가 손으로 보관하는 버전 3칸 + 숨은 대피칸. 자동저장(DB_PATH)과 경로를 나눠 둔다 —
+// 같은 곳에 두면 자동저장이 보관본을 덮어쓴다
+const SNAP_PATH = "scheduler/snapshots";
+
+export async function saveSnapshot(slot, snapshot) {
+  try { await set(ref(db, `${SNAP_PATH}/${slot}`), snapshot); return true; }
+  catch (e) { console.error("버전 저장 실패:", e); return false; }
+}
+
+export async function loadSnapshots() {
+  try { const snap = await get(ref(db, SNAP_PATH)); return snap.exists() ? snap.val() : null; }
+  catch (e) { console.error("버전 불러오기 실패:", e); throw e; }
+}
+
+export async function loadSnapshot(slot) {
+  try { const snap = await get(ref(db, `${SNAP_PATH}/${slot}`)); return snap.exists() ? snap.val() : null; }
+  catch (e) { console.error("버전 불러오기 실패:", e); throw e; }
+}
