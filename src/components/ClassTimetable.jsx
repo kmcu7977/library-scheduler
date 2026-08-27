@@ -7,7 +7,7 @@ import { buildClassGrid } from "../classgrid";
 
 export const PANES = {
   class: { pick: "수업 중",        title: "📕 수업 중",   tab: "수업 중인 학생" },
-  free:  { pick: "비어 있는 사람", title: "🟢 근무 가능", tab: "근무 가능한 학생" },
+  free:  { pick: "근무 가능",      title: "🟢 근무 가능", tab: "근무 가능한 학생" },
 };
 
 // 두 화면을 나란히 보려면 탭을 두 개 띄운다 — 배치는 창 관리(윈도우 스냅)에 맡기는 편이

@@ -175,7 +175,7 @@
 .class-chip { display: inline-block; font-size: 10.5px; font-weight: 700; border-radius: 5px;
   padding: 1px 5px; margin: 1px; white-space: nowrap; }
 .class-foot { font-size: 11.5px; color: #90a4ae; margin: 10px 2px 0; line-height: 1.6; }
-/* 수업 중 / 비어 있는 사람 전환 */
+/* 수업 중 / 근무 가능 전환 */
 .mode-switch { display: inline-flex; border: 1.5px solid #cfd8dc; border-radius: 8px; overflow: hidden; }
 .mode-switch button { background: none; border: none; padding: 5px 12px; font-size: 11.5px; font-weight: 700;
   color: #90a4ae; cursor: pointer; font-family: inherit; }
