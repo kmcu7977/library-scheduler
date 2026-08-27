@@ -68,7 +68,8 @@ export default function StatsPanel({ members, schedule, timeSlots, cfg, onClose 
                 const over = r.week > r.cap + 1e-9;
                 return (
                   <tr key={r.member.name}>
-                    <td className="td-time" style={{ color: r.member.color, fontWeight: 700, textAlign: "left", paddingLeft: 10 }}>
+                    <td className="td-time stat-name">
+                      <i className="mark-dot" style={{ background: r.member.color }} />
                       {r.member.name}
                       <span className="stat-sub">{r.days}일 출근</span>
                     </td>
@@ -80,7 +81,7 @@ export default function StatsPanel({ members, schedule, timeSlots, cfg, onClose 
                     <td className="stat-num strong">{fmt(r.week)}</td>
                     <td className="stat-num strong">{fmt(r.period)}</td>
                     <td className="stat-num">
-                      <div className="stat-bar"><i style={{ width: `${Math.min(pct, 100)}%`, background: over ? "#e53935" : r.member.color }} /></div>
+                      <div className="stat-bar"><i style={{ width: `${Math.min(pct, 100)}%`, background: over ? "var(--stamp)" : r.member.color }} /></div>
                       <span className={over ? "stat-over" : ""}>{fmt(r.week)}/{fmt(r.cap)}h</span>
                     </td>
                   </tr>
@@ -93,7 +94,7 @@ export default function StatsPanel({ members, schedule, timeSlots, cfg, onClose 
                 {DAYS.map(d => (
                   <td key={d} className="stat-num strong">
                     {fmt(total.byDay[d])}
-                    <div className="stat-bar sm"><i style={{ width: `${(total.byDay[d] / maxDay) * 100}%`, background: "#1976d2" }} /></div>
+                    <div className="stat-bar sm"><i style={{ width: `${(total.byDay[d] / maxDay) * 100}%`, background: "var(--navy)" }} /></div>
                   </td>
                 ))}
                 <td className="stat-num strong">{fmt(total.week)}</td>

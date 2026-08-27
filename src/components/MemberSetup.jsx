@@ -4,6 +4,7 @@ import { sortedByName } from "../utils";
 
 export default function MemberSetup({ members, setMembers, onNext, onBack }) {
   const [form, setForm] = useState({ name: "", ...EMPTY_INFO, weeklyHours: WEEKLY_HOURS_OPTIONS[0] });
+  const [addError, setAddError] = useState("");
   const [editTarget, setEditTarget] = useState(null);
   const [editInfo, setEditInfo] = useState({ ...EMPTY_INFO, preferFloor1: null, preferFloor2: null, weeklyHours: WEEKLY_HOURS_OPTIONS[0] });
   const upForm = (f, v) => setForm(prev => ({ ...prev, [f]: v }));
@@ -12,7 +13,10 @@ export default function MemberSetup({ members, setMembers, onNext, onBack }) {
 
   const addMember = () => {
     const n = form.name.trim();
-    if (!n || members.find(m => m.name === n)) return;
+    // 조용히 실패하면 "왜 안 되지"가 된다 — 이유를 화면에 말해준다
+    if (!n) { setAddError("이름을 입력해주세요."); return; }
+    if (members.find(m => m.name === n)) { setAddError(`${n} 님은 이미 등록되어 있습니다.`); return; }
+    setAddError("");
     setMembers(prev => [...prev, {
       name: n, dept: form.dept.trim(), studentId: form.studentId.trim(),
       phone: form.phone.trim(), note: form.note.trim(),
@@ -61,32 +65,33 @@ export default function MemberSetup({ members, setMembers, onNext, onBack }) {
         </div>
         <button className="btn-primary mf-add" onClick={addMember}>추가</button>
       </div>
+      {addError && <p className="form-error" role="alert">{addError}</p>}
 
       {members.length > 0 && (
         <div className="member-pref-table">
           <div className="pref-table-header">
-            <span style={{ minWidth: 24, fontSize: 11, color: "#78909c" }}>No</span>
+            <span style={{ minWidth: 24, fontSize: 11, color: "var(--ink-3)" }}>No</span>
             <span className="pref-col-name">이름</span>
-            <span style={{ flex: 1, fontSize: 11, color: "#78909c" }}>학과 / 학번</span>
-            <span style={{ minWidth: 110, fontSize: 11, color: "#78909c" }}>연락처</span>
-            <span style={{ minWidth: 180, fontSize: 11, color: "#78909c" }}>선호 층 (1순위 / 2순위)</span>
-            <span style={{ minWidth: 70, fontSize: 11, color: "#78909c" }}>비고</span>
-            <span style={{ minWidth: 96, fontSize: 11, color: "#78909c", textAlign: "center" }}>주 근무시간</span>
+            <span style={{ flex: 1, fontSize: 11, color: "var(--ink-3)" }}>학과 / 학번</span>
+            <span style={{ minWidth: 110, fontSize: 11, color: "var(--ink-3)" }}>연락처</span>
+            <span style={{ minWidth: 180, fontSize: 11, color: "var(--ink-3)" }}>선호 층 (1순위 / 2순위)</span>
+            <span style={{ minWidth: 70, fontSize: 11, color: "var(--ink-3)" }}>비고</span>
+            <span style={{ minWidth: 96, fontSize: 11, color: "var(--ink-3)", textAlign: "center" }}>주 근무시간</span>
             <span style={{ minWidth: 28 }} />
           </div>
           {sorted.map((m, idx) => (
             <div key={m.name} className="pref-table-row" style={{ borderLeft: `3px solid ${m.color}` }}>
-              <span style={{ minWidth: 24, fontSize: 12, color: "#546e7a" }}>{idx + 1}</span>
+              <span style={{ minWidth: 24, fontSize: 12, color: "var(--ink-2)" }}>{idx + 1}</span>
               <span className="pref-col-name" style={{ color: m.color, fontWeight: 700, cursor: "pointer" }}
                 title="클릭하여 수정" onClick={() => openEdit(m)}>{m.name}</span>
-              <span style={{ flex: 1, fontSize: 11, color: "#607d8b" }}>
+              <span style={{ flex: 1, fontSize: 11, color: "var(--ink-2)" }}>
                 {m.dept || <span style={{ color: "#B9CCE6" }}>·</span>}
-                {m.studentId && <span style={{ color: "#546e7a", marginLeft: 6 }}>({m.studentId})</span>}
+                {m.studentId && <span style={{ color: "var(--ink-2)", marginLeft: 6 }}>({m.studentId})</span>}
               </span>
-              <span style={{ minWidth: 110, fontSize: 11, color: "#607d8b" }}>{m.phone || <span style={{ color: "#b0bec5" }}>—</span>}</span>
+              <span style={{ minWidth: 110, fontSize: 11, color: "var(--ink-2)" }}>{m.phone || <span style={{ color: "var(--ink-3)" }}>—</span>}</span>
               <div style={{ minWidth: 180, display: "flex", flexDirection: "column", gap: 3 }}>
                 <div style={{ display: "flex", gap: 3, alignItems: "center" }}>
-                  <span style={{ fontSize: 10, color: "#90a4ae", minWidth: 28 }}>1순위</span>
+                  <span style={{ fontSize: 10, color: "var(--ink-3)", minWidth: 28 }}>1순위</span>
                   {FLOOR_OPTIONS.map(floor => (
                     <button key={floor}
                       className={"pref-floor-btn" + (m.preferFloor1 === floor ? " selected" : "")}
@@ -97,7 +102,7 @@ export default function MemberSetup({ members, setMembers, onNext, onBack }) {
                   ))}
                 </div>
                 <div style={{ display: "flex", gap: 3, alignItems: "center" }}>
-                  <span style={{ fontSize: 10, color: "#b0bec5", minWidth: 28 }}>2순위</span>
+                  <span style={{ fontSize: 10, color: "var(--ink-3)", minWidth: 28 }}>2순위</span>
                   {FLOOR_OPTIONS.map(floor => (
                     <button key={floor}
                       className={"pref-floor-btn" + (m.preferFloor2 === floor ? " selected" : "")}
@@ -108,7 +113,7 @@ export default function MemberSetup({ members, setMembers, onNext, onBack }) {
                   ))}
                 </div>
               </div>
-              <span style={{ minWidth: 70, fontSize: 11, color: "#607d8b", overflow: "hidden", textOverflow: "ellipsis" }}>{m.note || ""}</span>
+              <span style={{ minWidth: 70, fontSize: 11, color: "var(--ink-2)", overflow: "hidden", textOverflow: "ellipsis" }}>{m.note || ""}</span>
               <div style={{ minWidth: 96, display: "flex", gap: 3, justifyContent: "center" }}>
                 {WEEKLY_HOURS_OPTIONS.map(h => (
                   <button key={h} className={"hours-btn sm" + ((m.weeklyHours ?? WEEKLY_HOURS_OPTIONS[0]) === h ? " selected" : "")}
@@ -137,19 +142,19 @@ export default function MemberSetup({ members, setMembers, onNext, onBack }) {
                 { key: "note",      label: "비고",   ph: "특이사항" },
               ].map(({ key, label, ph }) => (
                 <div key={key} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <label style={{ minWidth: 44, fontSize: 12, color: "#546e7a" }}>{label}</label>
+                  <label style={{ minWidth: 44, fontSize: 12, color: "var(--ink-2)" }}>{label}</label>
                   <input className="text-input" style={{ flex: 1, padding: "7px 10px", fontSize: 13 }}
                     placeholder={ph} value={editInfo[key]}
                     onChange={e => setEditInfo(prev => ({ ...prev, [key]: e.target.value }))} />
                 </div>
               ))}
               <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-                <label style={{ minWidth: 44, fontSize: 12, color: "#546e7a", paddingTop: 4 }}>선호 층</label>
+                <label style={{ minWidth: 44, fontSize: 12, color: "var(--ink-2)", paddingTop: 4 }}>선호 층</label>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                    <span style={{ fontSize: 11, color: "#90a4ae", minWidth: 36 }}>1순위</span>
+                    <span style={{ fontSize: 11, color: "var(--ink-3)", minWidth: 36 }}>1순위</span>
                     {FLOOR_OPTIONS.map(floor => {
-                      const color = members.find(m => m.name === editTarget)?.color || "#1976d2";
+                      const color = members.find(m => m.name === editTarget)?.color || "var(--navy)";
                       const sel = editInfo.preferFloor1 === floor;
                       return (
                         <button key={floor} className={"pref-floor-btn" + (sel ? " selected" : "")}
@@ -161,9 +166,9 @@ export default function MemberSetup({ members, setMembers, onNext, onBack }) {
                     })}
                   </div>
                   <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                    <span style={{ fontSize: 11, color: "#b0bec5", minWidth: 36 }}>2순위</span>
+                    <span style={{ fontSize: 11, color: "var(--ink-3)", minWidth: 36 }}>2순위</span>
                     {FLOOR_OPTIONS.map(floor => {
-                      const color = members.find(m => m.name === editTarget)?.color || "#1976d2";
+                      const color = members.find(m => m.name === editTarget)?.color || "var(--navy)";
                       const sel = editInfo.preferFloor2 === floor;
                       return (
                         <button key={floor} className={"pref-floor-btn" + (sel ? " selected" : "")}
@@ -178,7 +183,7 @@ export default function MemberSetup({ members, setMembers, onNext, onBack }) {
               </div>
             </div>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
-                <label style={{ minWidth: 44, fontSize: 12, color: "#546e7a" }}>주 근무</label>
+                <label style={{ minWidth: 44, fontSize: 12, color: "var(--ink-2)" }}>주 근무</label>
                 <div style={{ display: "flex", gap: 6 }}>
                   {WEEKLY_HOURS_OPTIONS.map(h => (
                     <button key={h} className={"hours-btn" + (editInfo.weeklyHours === h ? " selected" : "")}

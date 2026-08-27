@@ -32,7 +32,7 @@ export default function SchedulePreviewPage() {
   };
 
   if (state.status !== "done") return (
-    <div className="class-page-msg" style={{ color: state.status === "loading" ? "#1976d2" : "#e06c75" }}>
+    <div className="class-page-msg" style={{ color: state.status === "loading" ? "var(--navy)" : "var(--stamp)" }}>
       {state.status === "loading" ? "불러오는 중..."
         : state.status === "empty" ? "이 칸에는 보관된 버전이 없습니다."
         : "Firebase에 연결하지 못했습니다."}
@@ -104,7 +104,7 @@ export default function SchedulePreviewPage() {
                         // 점심 칸은 개인 색을 덮는다 (근무표 화면과 같은 규칙)
                         const style = lunch
                           ? { background: "#FEF3C7", color: name ? "#92400E" : "#C9B896", fontWeight: name ? 700 : 400 }
-                          : name ? { background: color + "26", color, boxShadow: `inset 3px 0 0 ${color}`, fontWeight: 700 } : {};
+                          : name ? { background: color + "26", color: `color-mix(in srgb, ${color} 62%, #0F172A)`, boxShadow: `inset 3px 0 0 ${color}`, fontWeight: 700 } : {};
                         return (
                           <td key={`${day}-${fk}`}
                             className={`td-cell td-view ${name ? "" : "empty-cell"} ${fi === 0 ? "day-start" : ""} ${lunch ? "lunch-cell" : ""}`}

@@ -155,17 +155,18 @@ export default function ScheduleEditor({ members, schedule, setSchedule, pins, s
           const dayPct = fillPct - nightPct;
           return (
             <div key={m.name} className="weekly-item">
-              <span className="weekly-name" style={{ color: m.color }}>
+              <span className="weekly-name">
+                <i className="mark-dot" style={{ background: m.color }} />
                 {m.name}
                 {maxW !== cfg.maxWeeklyHours && <span className="weekly-cap">{maxW}h</span>}
               </span>
               <div className="weekly-track" style={{ display: "flex" }}>
-                <div style={{ width: `${dayPct}%`, height: "100%", background: over ? "#e06c75" : m.color, borderRadius: "3px 0 0 3px" }} />
-                <div style={{ width: `${nightPct}%`, height: "100%", background: over ? "#b71c1c" : "#1a237e", borderRadius: nightPct > 0 ? "0 3px 3px 0" : 0 }} />
+                <div style={{ width: `${dayPct}%`, height: "100%", background: over ? "var(--stamp)" : m.color, borderRadius: "3px 0 0 3px" }} />
+                <div style={{ width: `${nightPct}%`, height: "100%", background: over ? "var(--stamp)" : "var(--navy)", borderRadius: nightPct > 0 ? "0 3px 3px 0" : 0 }} />
               </div>
               <span className={`weekly-h ${over ? "over" : ""}`}>
-                {h} / {maxW}h
-                {nh > 0 && <span style={{ fontSize: 10, color: "#5c6bc0", marginLeft: 3 }}>(야{nh}h)</span>}
+                {h} / {maxW}h{over && " 초과"}
+                {nh > 0 && <span style={{ fontSize: 10, color: "var(--ink-2)", marginLeft: 3 }}>(야{nh}h)</span>}
               </span>
             </div>
           );
@@ -233,9 +234,9 @@ export default function ScheduleEditor({ members, schedule, setSchedule, pins, s
           <div className="cell-popup" onClick={e => e.stopPropagation()}>
             <p className="popup-title">
               {editSummary.days} {editSummary.time}
-              {editCell.cells.length > 1 && <span style={{ color: "#1976d2", fontWeight: 700 }}> ({editCell.cells.length}칸)</span>}<br />
-              <span style={{ color: "#1976d2" }}>{editSummary.floors}</span> 담당자 지정
-              <span style={{ display: "block", fontSize: 11, color: "#90a4ae", marginTop: 4 }}>
+              {editCell.cells.length > 1 && <span style={{ color: "var(--navy)", fontWeight: 700 }}> ({editCell.cells.length}칸)</span>}<br />
+              <span style={{ color: "var(--navy)" }}>{editSummary.floors}</span> 담당자 지정
+              <span style={{ display: "block", fontSize: 11, color: "var(--ink-3)", marginTop: 4 }}>
                 적합한 순서로 정렬했습니다 · 회색은 배치 불가, 주황 표시는 한도를 넘지만 지정은 가능합니다
               </span>
             </p>
@@ -249,7 +250,7 @@ export default function ScheduleEditor({ members, schedule, setSchedule, pins, s
                     style={{ borderColor: m.color + (dimmed ? "33" : "99") }}
                     onClick={() => !dimmed && assignMember(m.name)}
                     title={dimmed ? r.conflicts.join(", ") : "이 사람으로 지정"}>
-                    <span className="rec-name" style={{ color: dimmed ? "#b0bec5" : m.color }}>
+                    <span className="rec-name" style={{ color: dimmed ? "var(--ink-3)" : m.color }}>
                       {best && <span className="rec-star">추천</span>}
                       {m.name}
                       {r.isCurrent && <span className="rec-now">현재</span>}
@@ -295,10 +296,10 @@ export default function ScheduleEditor({ members, schedule, setSchedule, pins, s
       {confirmClear && (
         <div className="cell-popup-overlay" onClick={() => setConfirmClear(false)}>
           <div className="cell-popup" onClick={e => e.stopPropagation()} style={{ maxWidth: 340, textAlign: "center" }}>
-            <p className="panel-title" style={{ color: "#9C2B2B", marginBottom: 10 }}>시간표 비우기</p>
+            <p className="panel-title" style={{ color: "var(--stamp)", marginBottom: 10 }}>시간표 비우기</p>
             <p className="popup-title" style={{ marginBottom: 20 }}>
               배치된 인원과 확정 표시가 모두 지워집니다.<br />
-              <span style={{ fontSize: 12, color: "#90a4ae" }}>등록한 인원과 수업시간은 그대로 남습니다.</span>
+              <span style={{ fontSize: 12, color: "var(--ink-3)" }}>등록한 인원과 수업시간은 그대로 남습니다.</span>
             </p>
             <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
               <button className="btn-back" onClick={() => setConfirmClear(false)}>취소</button>

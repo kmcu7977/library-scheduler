@@ -74,10 +74,10 @@ export default function SubTooltip({ members, day, si, fk, schedule, mousePos, v
           <div className="sub-section-label">{currentName} 수업</div>
           {dayOrder.filter(d => classesThisWeek[d]).map(d => (
             <div key={d} style={{ display: "flex", gap: 4, alignItems: "center", marginTop: 3 }}>
-              <span style={{ fontSize: 10, fontWeight: 700, color: "#90a4ae", minWidth: 16 }}>{d}</span>
+              <span style={{ fontSize: 10, fontWeight: 700, color: "var(--ink-3)", minWidth: 16 }}>{d}</span>
               <div className="sub-chips" style={{ margin: 0 }}>
                 {classesThisWeek[d].map((t, i) => (
-                  <div key={i} className="sub-chip" style={{ borderColor: "#cfd8dc", background: "#f5f5f5", color: "#78909c" }}>
+                  <div key={i} className="sub-chip" style={{ borderColor: "var(--rule-2)", background: "var(--field)", color: "var(--ink-3)" }}>
                     {t}
                   </div>
                 ))}

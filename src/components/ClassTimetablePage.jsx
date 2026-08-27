@@ -23,7 +23,7 @@ export default function ClassTimetablePage() {
   ), []);
 
   if (state.status !== "done") return (
-    <div className="class-page-msg" style={{ color: state.status === "error" ? "#e06c75" : "#1976d2" }}>
+    <div className="class-page-msg" style={{ color: state.status === "error" ? "var(--stamp)" : "var(--navy)" }}>
       {state.status === "error" ? "Firebase에 연결하지 못했습니다." : "불러오는 중..."}
       {state.status === "error" && (
         <button className="btn-back" style={{ marginTop: 14 }} onClick={() => window.location.reload()}>다시 시도</button>
@@ -51,7 +51,7 @@ export default function ClassTimetablePage() {
       <main className="app-main">
         <div className="step-card wide">
           {members.length === 0
-            ? <p style={{ fontSize: 13, color: "#607d8b" }}>등록된 인원이 없습니다. 시간표 탭에서 인원을 먼저 등록해주세요.</p>
+            ? <p style={{ fontSize: 13, color: "var(--ink-2)" }}>등록된 인원이 없습니다. 시간표 탭에서 인원을 먼저 등록해주세요.</p>
             : <ClassTimetableView members={members} cfg={cfg} mode={mode} setMode={setMode} />}
         </div>
       </main>

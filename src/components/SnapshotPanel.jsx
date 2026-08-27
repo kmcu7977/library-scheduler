@@ -119,7 +119,7 @@ export default function SnapshotPanel({ state, onRestore, onClose }) {
               </p>
               <p className="popup-title" style={{ marginBottom: 18 }}>
                 지금 화면이 <b>«{ask.snap.name}»</b>({fmtSavedAt(ask.snap.savedAt)})으로 바뀝니다.<br />
-                <span style={{ fontSize: 12, color: "#607d8b" }}>
+                <span style={{ fontSize: 12, color: "var(--ink-2)" }}>
                   운영설정·인원·수업·시간표가 함께 바뀌며, 지금 상태는 되돌릴 수 있게 자동으로 보관됩니다.
                 </span>
               </p>

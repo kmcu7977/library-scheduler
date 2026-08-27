@@ -130,19 +130,13 @@ export default function App() {
     else setStep(i);
   };
 
-  if (loadStatus === "loading") return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "#e8f4fd", color: "#1976d2", fontSize: 16, fontFamily: "Noto Sans KR, sans-serif" }}>
-      불러오는 중...
-    </div>
-  );
+  if (loadStatus === "loading") return <div className="class-page-msg" style={{ color: "var(--navy)" }}>불러오는 중...</div>;
 
   if (loadStatus === "error") return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", background: "#e8f4fd", color: "#e06c75", fontSize: 15, fontFamily: "Noto Sans KR, sans-serif", gap: 16 }}>
+    <div className="class-page-msg" style={{ color: "var(--stamp)" }}>
       <span>Firebase에 연결하지 못했습니다.</span>
-      <span style={{ fontSize: 12, color: "#607d8b" }}>firebaseConfig 설정값을 확인하거나 네트워크 상태를 확인해주세요.</span>
-      <button onClick={() => window.location.reload()} style={{ marginTop: 8, background: "#1976d2", color: "#fff", border: "none", borderRadius: 8, padding: "10px 24px", fontSize: 13, cursor: "pointer" }}>
-        새로고침
-      </button>
+      <span style={{ fontSize: 12, color: "var(--ink-2)" }}>firebaseConfig 설정값을 확인하거나 네트워크 상태를 확인해주세요.</span>
+      <button className="btn-primary" onClick={() => window.location.reload()}>새로고침</button>
     </div>
   );
 
@@ -192,7 +186,7 @@ export default function App() {
       {showResetConfirm && (
         <div className="cell-popup-overlay" onClick={() => setShowResetConfirm(false)}>
           <div className="cell-popup" onClick={e => e.stopPropagation()} style={{ maxWidth: 320, textAlign: "center" }}>
-            <p className="panel-title" style={{ color: "#9C2B2B", marginBottom: 10 }}>전체 초기화</p>
+            <p className="panel-title" style={{ color: "var(--stamp)", marginBottom: 10 }}>전체 초기화</p>
             <p className="popup-title" style={{ marginBottom: 16 }}>
               아래가 모두 삭제되며 되돌릴 수 없습니다.
               <span className="danger-list">
@@ -201,7 +195,7 @@ export default function App() {
                 · 작성한 시간표와 확정 표시<br />
                 · 운영 설정 (학기 중 기본값으로 되돌아감)
               </span>
-              <span style={{ display: "block", marginTop: 10, fontSize: 12, color: "#607d8b" }}>
+              <span style={{ display: "block", marginTop: 10, fontSize: 12, color: "var(--ink-2)" }}>
                 시간표만 지우시려면 시간표 화면의 <b>시간표 비우기</b>를 쓰세요.
               </span>
             </p>

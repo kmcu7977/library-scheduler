@@ -20,7 +20,7 @@ export const openClassTab = mode =>
 function ClassGridTable({ mode, days, hours, grid, freeGrid }) {
   const fmt = c => `${c.startHour}:${String(c.startMin).padStart(2, "0")}~${c.endHour}:${String(c.endMin).padStart(2, "0")}`;
   const chip = (key, name, color, title) => (
-    <span key={key} className="class-chip" style={{ background: (color || "#90a4ae") + "33", color: color || "#455A75" }} title={title}>
+    <span key={key} className="class-chip" style={{ background: (color || "#8A99AE") + "33", color: color ? `color-mix(in srgb, ${color} 62%, #0F172A)` : "var(--ink-2)" }} title={title}>
       {name}
     </span>
   );
@@ -79,7 +79,7 @@ export function ClassTimetableView({ members, cfg, mode, setMode }) {
       </div>
       <div className="class-filter">
         <button className={"class-pick" + (picked.length === 0 ? " on" : "")}
-          style={picked.length === 0 ? { borderColor: "#1976d2", color: "#1976d2", background: "#e3f2fd" } : {}}
+          style={picked.length === 0 ? { borderColor: "var(--navy)", color: "var(--navy)", background: "var(--navy-tint)" } : {}}
           onClick={() => setPicked([])}>
           전체 {members.length}명
         </button>

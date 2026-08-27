@@ -60,7 +60,7 @@ export default function OperationSetup({ cfg, onNext }) {
             <label className="cfg-label">첫 슬롯 길이</label>
             <div className="cfg-time-inputs">
               <span className="cfg-colon" style={{ fontWeight: 700 }}>{localCfg.firstSlotMins}분</span>
-              <span className="cfg-colon" style={{ fontSize: 11, color: "#5a6480" }}>(자동)</span>
+              <span className="cfg-colon" style={{ fontSize: 11, color: "var(--ink-2)" }}>(자동)</span>
             </div>
           </div>
         </div>

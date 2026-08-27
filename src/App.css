@@ -33,7 +33,7 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 body { font-family: var(--sans); background: var(--paper); color: var(--ink); -webkit-font-smoothing: antialiased; }
-.app { min-height: 100vh; background: var(--paper); color: var(--ink); font-family: var(--sans); }
+.app { min-height: 100dvh; background: var(--paper); color: var(--ink); font-family: var(--sans); }
 
 /* ── 문서 머리 ─────────────────────────────────────────
    화면 표제가 곧 엑셀로 뽑히는 문서의 표제다(cfg.title). 편집 중인 화면과 인쇄물이 같은 얼굴 */
@@ -41,7 +41,7 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); -w
 .header-accent { display: none; }
 .header-top { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; padding-bottom: 20px; }
 .masthead-eyebrow { font-size: 11px; font-weight: 600; letter-spacing: .22em; color: var(--ink-3); margin-bottom: 8px; }
-.app-title { font-size: 26px; font-weight: 800; color: var(--ink); letter-spacing: -.035em; line-height: 1.25; }
+.app-title { text-wrap: balance; font-size: 26px; font-weight: 800; color: var(--ink); letter-spacing: -.035em; line-height: 1.25; }
 .masthead-meta { font-size: 12px; color: var(--ink-2); margin-top: 7px; font-variant-numeric: tabular-nums; }
 .header-actions { display: flex; align-items: center; gap: 16px; padding-bottom: 2px; }
 .save-indicator { font-size: 12px; color: var(--ink-3); transition: color .3s; }
@@ -71,7 +71,7 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); -w
 .step-card { background: var(--sheet); border: 1px solid var(--rule); border-radius: var(--r); padding: 30px 32px; width: 100%; max-width: 660px; }
 .step-card.wide { max-width: calc(100vw - 80px); }
 .step-title { font-size: 18px; font-weight: 800; color: var(--ink); letter-spacing: -.025em; margin-bottom: 6px; }
-.step-desc { font-size: 13px; color: var(--ink-2); margin-bottom: 20px; line-height: 1.7; }
+.step-desc { text-wrap: pretty; font-size: 13px; color: var(--ink-2); margin-bottom: 20px; line-height: 1.7; }
 .panel-title { font-size: 16px; font-weight: 800; color: var(--ink); letter-spacing: -.02em; margin: 0; }
 
 /* ── 조작 요소 ──────────────────────────────────────── */
@@ -90,6 +90,10 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); -w
 }
 .btn-back:hover { border-color: var(--navy); color: var(--ink); }
 .btn-back:disabled, .snap-primary:disabled { opacity: .45; cursor: default; }
+/* 누르는 순간의 반응. 없으면 클릭이 먹었는지 눈으로 알 수 없다 */
+.btn-next:active, .btn-primary:active, .btn-back:active:not(:disabled), .btn-export:active,
+.snap-primary:active:not(:disabled), .btn-danger-solid:active, .preset-btn:active, .min-btn:active,
+.class-pick:active, .hours-btn:active, .pref-floor-btn:active, .mode-switch button:active { transform: translateY(1px); }
 .btn-add-class { background: none; color: var(--ink-2); border: 1px dashed var(--rule-2); border-radius: var(--r); padding: 8px 15px; font-size: 12.5px; font-family: inherit; cursor: pointer; margin-top: 4px; }
 .btn-add-class:hover { border-color: var(--navy); color: var(--ink); }
 .nav-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 26px; padding-top: 18px; border-top: 1px solid var(--rule); }
@@ -171,8 +175,12 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); -w
 /* 주간 근무시간 — 막대는 얇게. 이 화면의 주인공은 표지 막대가 아니라 표다 */
 .weekly-bar { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-bottom: 20px; padding: 14px 16px; background: var(--field); border: 1px solid var(--rule); border-radius: var(--r); }
 .weekly-item { display: flex; align-items: center; gap: 8px; min-width: 178px; flex: 1; }
-.weekly-name { font-size: 12.5px; font-weight: 600; min-width: 52px; }
-.weekly-track { flex: 1; height: 3px; background: var(--rule); overflow: hidden; }
+.weekly-name { display: flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 600; min-width: 62px; color: var(--ink); }
+/* 정체성은 이 표식이 나르고 글자는 먹으로 둔다 — 밝은 색 이름은 흰 바탕에서 안 읽힌다 */
+.mark-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+.stat-name { text-align: left !important; padding-left: 10px !important; font-weight: 700; color: var(--ink) !important; }
+.stat-name .mark-dot { display: inline-block; margin-right: 5px; vertical-align: -1px; }
+.weekly-track { flex: 1; height: 4px; border-radius: 2px; background: var(--rule); overflow: hidden; }
 .weekly-fill { height: 100%; }
 .weekly-h { font-size: 11.5px; color: var(--ink-2); min-width: 62px; text-align: right; font-variant-numeric: tabular-nums; }
 .weekly-h.over { color: var(--stamp); font-weight: 700; }
@@ -283,8 +291,8 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); -w
 /* 수업시간표·미리보기 전용 탭 */
 .class-page .app-main { padding: 24px 24px 40px; }
 .class-page .step-card.wide { max-width: 100%; }
-.class-page .table-wrap { max-height: calc(100vh - 300px); overflow: auto; }
-.class-page-msg { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: var(--paper); font-size: 15px; font-family: var(--sans); gap: 12px; }
+.class-page .table-wrap { max-height: calc(100dvh - 300px); overflow: auto; }
+.class-page-msg { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100dvh; background: var(--paper); font-size: 15px; font-family: var(--sans); gap: 12px; }
 .td-view { cursor: default; }
 .td-view:hover::after { background: transparent; }
 
@@ -303,7 +311,7 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); -w
 .stat-num.strong { font-weight: 700; }
 .stat-num.zero { color: #C9CDD2; }
 .stat-sub { display: block; font-size: 10px; color: var(--ink-3); font-weight: 400; }
-.stat-bar { height: 3px; background: var(--rule); overflow: hidden; margin: 3px 0 2px; }
+.stat-bar { height: 4px; border-radius: 2px; background: var(--rule); overflow: hidden; margin: 3px 0 2px; }
 .stat-bar.sm { height: 2px; }
 .stat-bar i { display: block; height: 100%; }
 .stat-over { color: var(--stamp); font-weight: 700; }
@@ -339,3 +347,7 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); -w
 .danger-list { display: block; margin-top: 10px; padding: 11px 13px; background: var(--stamp-tint); border: 1px solid #F6C9C9;
   border-radius: var(--r); color: var(--stamp); font-size: 12.5px; text-align: left; line-height: 1.9; }
 .weekly-cap { margin-left: 4px; font-size: 10px; font-weight: 700; background: var(--navy); color: #fff; border-radius: 2px; padding: 1px 4px; }
+
+/* 입력이 막혔을 때 이유를 말하는 자리 */
+.form-error { font-size: 12.5px; color: var(--stamp); background: var(--stamp-tint); border: 1px solid #F6C9C9;
+  border-radius: var(--r); padding: 8px 12px; margin: -10px 0 16px; }
