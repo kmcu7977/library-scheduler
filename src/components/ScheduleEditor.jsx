@@ -139,7 +139,7 @@ export default function ScheduleEditor({ members, schedule, setSchedule, pins, s
   }, [editCell, timeSlots]);
 
   return (
-    <div className="step-card wide">
+    <div className="step-card wide editor-card">
       <div className="editor-header">
         <h2 className="step-title" style={{ margin: 0 }}>시간표 확인 및 수정</h2>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>

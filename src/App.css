@@ -41,11 +41,11 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); -w
 
 /* ── 문서 머리 ─────────────────────────────────────────
    화면 표제가 곧 엑셀로 뽑히는 문서의 표제다(cfg.title). 편집 중인 화면과 인쇄물이 같은 얼굴 */
-.app-header { position: relative; padding: 30px 40px 0; background: var(--sheet); border-bottom: 1px solid var(--rule); }
+.app-header { position: relative; padding: 14px 28px 0; background: var(--sheet); border-bottom: 1px solid var(--rule); }
 .header-accent { display: none; }
-.header-top { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; padding-bottom: 20px; }
-.masthead-eyebrow { font-size: 11px; font-weight: 600; letter-spacing: .22em; color: var(--ink-3); margin-bottom: 8px; }
-.app-title { text-wrap: balance; font-size: 26px; font-weight: 800; color: var(--ink); letter-spacing: -.035em; line-height: 1.25; }
+.header-top { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding-bottom: 10px; }
+.masthead-eyebrow { font-size: 10.5px; font-weight: 600; letter-spacing: .2em; color: var(--ink-3); margin-bottom: 3px; }
+.app-title { text-wrap: balance; font-size: 20px; font-weight: 800; color: var(--ink); letter-spacing: -.035em; line-height: 1.25; }
 .masthead-meta { font-size: 12px; color: var(--ink-2); margin-top: 7px; font-variant-numeric: tabular-nums; }
 .header-actions { display: flex; align-items: center; gap: 16px; padding-bottom: 2px; }
 .save-indicator { font-size: 12px; color: var(--ink-3); transition: color .3s; }
@@ -56,24 +56,24 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); -w
 .btn-reset:hover { color: var(--stamp); border-bottom-color: var(--stamp); }
 
 /* 단계 — 순서가 실제로 의미를 갖는 절차라 번호를 남긴다 */
-.step-indicator { display: flex; gap: 30px; align-items: flex-end; flex-wrap: wrap; }
-.step-dot { display: flex; align-items: baseline; gap: 7px; padding: 0 1px 11px; border-bottom: 2px solid transparent; color: var(--ink-3); transition: color .15s, border-color .15s; }
+.step-indicator { display: flex; gap: 24px; align-items: flex-end; flex-wrap: wrap; }
+.step-dot { display: flex; align-items: baseline; gap: 6px; padding: 0 1px 8px; border-bottom: 2px solid transparent; color: var(--ink-3); transition: color .15s, border-color .15s; }
 .step-dot:hover { color: var(--ink-2); }
 .step-dot.done { color: var(--ink-2); }
 .step-dot.current { color: var(--ink); border-bottom-color: var(--navy); }
 .step-dot.locked, .step-dot.locked:hover { color: #C7CBD0; }
 .step-dot span { font-size: 11px; font-weight: 700; letter-spacing: .08em; font-variant-numeric: tabular-nums; }
-.step-dot label { font-size: 13.5px; font-weight: 500; cursor: inherit; }
+.step-dot label { font-size: 13px; font-weight: 500; cursor: inherit; }
 
-.app-main { padding: 34px 40px 56px; display: flex; justify-content: center; }
+.app-main { padding: 16px 24px 20px; display: flex; justify-content: center; align-items: flex-start; }
 @media (max-width: 640px) {
   .app-header { padding: 22px 18px 0; }
   .app-main { padding: 22px 14px 40px; }
 }
 
 /* ── 종이 ───────────────────────────────────────────── */
-.step-card { background: var(--sheet); border: 1px solid var(--rule); border-radius: var(--r); padding: 30px 32px; width: 100%; max-width: 660px; }
-.step-card.wide { max-width: calc(100vw - 80px); }
+.step-card { background: var(--sheet); border: 1px solid var(--rule); border-radius: var(--r); padding: 20px 22px; width: 100%; max-width: 660px; }
+.step-card.wide { max-width: calc(100vw - 48px); }
 .step-title { font-size: 18px; font-weight: 800; color: var(--ink); letter-spacing: -.025em; margin-bottom: 6px; }
 .step-desc { text-wrap: pretty; font-size: 13px; color: var(--ink-2); margin-bottom: 20px; line-height: 1.7; }
 .panel-title { font-size: 16px; font-weight: 800; color: var(--ink); letter-spacing: -.02em; margin: 0; }
@@ -100,7 +100,7 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); -w
 .class-pick:active, .hours-btn:active, .pref-floor-btn:active, .mode-switch button:active { transform: translateY(1px); }
 .btn-add-class { background: none; color: var(--ink-2); border: 1px dashed var(--rule-2); border-radius: var(--r); padding: 8px 15px; font-size: 12.5px; font-family: inherit; cursor: pointer; margin-top: 4px; }
 .btn-add-class:hover { border-color: var(--navy); color: var(--ink); }
-.nav-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 26px; padding-top: 18px; border-top: 1px solid var(--rule); }
+.nav-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--rule); }
 
 .text-input, .cfg-text, .cfg-num, .sel, .time-inp {
   background: var(--field); border: 1px solid var(--rule-2); border-radius: var(--r); color: var(--ink);
@@ -172,13 +172,13 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); -w
 .class-row { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
 
 /* ── ③ 시간표 ──────────────────────────────────────── */
-.editor-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 10px; }
+.editor-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 10px; }
 .cfg-badge, .hover-hint { font-size: 12px; color: var(--ink-2); background: var(--field); border: 1px solid var(--rule); border-radius: var(--r); padding: 6px 11px; font-variant-numeric: tabular-nums; }
 .hover-hint { color: var(--ink-3); }
 
 /* 주간 근무시간 — 막대는 얇게. 이 화면의 주인공은 표지 막대가 아니라 표다 */
-.weekly-bar { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-bottom: 20px; padding: 14px 16px; background: var(--field); border: 1px solid var(--rule); border-radius: var(--r); }
-.weekly-item { display: flex; align-items: center; gap: 8px; min-width: 178px; flex: 1; }
+.weekly-bar { display: flex; flex-wrap: wrap; gap: 5px 16px; margin-bottom: 12px; padding: 9px 12px; background: var(--field); border: 1px solid var(--rule); border-radius: var(--r); }
+.weekly-item { display: flex; align-items: center; gap: 7px; min-width: 168px; flex: 1; }
 .weekly-name { display: flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 600; min-width: 62px; color: var(--ink); }
 /* 정체성은 이 표식이 나르고 글자는 먹으로 둔다 — 밝은 색 이름은 흰 바탕에서 안 읽힌다 */
 .mark-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
@@ -199,13 +199,13 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); -w
 .audit-bar em.warn { color: var(--sand-ink); }
 
 .table-wrap { overflow-x: auto; border: 1px solid var(--rule-2); }
-.sched-table { border-collapse: collapse; width: 100%; font-size: 12.5px; table-layout: fixed; user-select: none; }
-.sched-table th, .sched-table td { border: 1px solid var(--rule); text-align: center; padding: 6px 4px; white-space: pre-line; }
-.th-time { background: var(--navy-tint); color: var(--ink-3); font-weight: 600; width: 96px; font-size: 11.5px; }
+.sched-table { border-collapse: collapse; width: 100%; font-size: 14px; table-layout: fixed; user-select: none; }
+.sched-table th, .sched-table td { border: 1px solid var(--rule); text-align: center; padding: 9px 5px; white-space: pre-line; }
+.th-time { background: var(--navy-tint); color: var(--ink-3); font-weight: 600; width: 112px; font-size: 12.5px; }
 .th-day { background: var(--navy); color: #fff; font-weight: 600; font-size: 12.5px; letter-spacing: .22em; padding: 8px 4px; }
 .sched-table .th-day.alt { background: #2555C9; }
 .th-floor { background: var(--navy-tint); color: var(--navy); font-weight: 600; font-size: 11px; letter-spacing: .04em; border-bottom: 1px solid var(--rule-2); }
-.td-time { background: var(--navy-tint); color: var(--ink-2); font-size: 11px; width: 96px; line-height: 1.5; font-variant-numeric: tabular-nums; }
+.td-time { background: var(--navy-tint); color: var(--ink-2); font-size: 12.5px; width: 112px; line-height: 1.45; font-variant-numeric: tabular-nums; }
 .td-cell { cursor: pointer; font-size: 12.5px; position: relative; }
 .td-cell::after { content: ''; position: absolute; inset: 0; background: transparent; pointer-events: none; transition: background .12s; }
 .td-cell:hover::after { background: rgba(28,36,48,0.06); }
@@ -227,18 +227,38 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); -w
 .sched-table:not(.class-table) td { border: 1px solid var(--form-line); color: var(--ink); }
 .sched-table:not(.class-table) .th-day,
 .sched-table:not(.class-table) .th-floor { background: #fff; color: var(--ink); font-weight: 700; letter-spacing: 0; }
-.sched-table:not(.class-table) .th-day { font-size: 14px; border-top: 2px solid var(--form-line); }
-.sched-table:not(.class-table) .th-floor { font-size: 12.5px; }
+.sched-table:not(.class-table) .th-day { font-size: 16px; border-top: 2px solid var(--form-line); }
+.sched-table:not(.class-table) .th-floor { font-size: 13.5px; }
 .sched-table:not(.class-table) .th-time,
-.sched-table:not(.class-table) .td-time { background: #fff; color: var(--ink); font-weight: 700; font-size: 12px;
+.sched-table:not(.class-table) .td-time { background: #fff; color: var(--ink); font-weight: 700; font-size: 13.5px;
   border-left: 2px solid var(--form-line); border-right: 2px solid var(--form-line); }
-.sched-table:not(.class-table) .td-cell { font-size: 13px; font-weight: 400; }
+.sched-table:not(.class-table) .td-cell { font-size: 15px; font-weight: 400; }
 /* 요일 경계·바깥 테두리 = medium. 요일 이름 칸부터 표 바닥까지 한 줄로 이어진다 */
 .sched-table:not(.class-table) .day-start { border-left: 2px solid var(--form-line); }
 .sched-table:not(.class-table) tr > *:last-child { border-right: 2px solid var(--form-line); }
 .sched-table:not(.class-table) tbody tr:last-child > * { border-bottom: 2px solid var(--form-line); }
 /* 첫 슬롯(30분)만 빨강 — 양식에서 눈에 띄게 해둔 그대로 */
 .sched-table:not(.class-table) tbody tr:first-child .td-time { color: var(--form-first); }
+
+/* 근무표는 세로로도 스크롤되는 상자다 — 그래야 요일·층 머리글과 시간 열을 붙여둘 수 있다.
+   화면이 낮은 노트북(작업 표시줄까지 겹치면 더 낮다)에서 아래로 내리면 머리글이 사라져
+   "이 열이 무슨 요일이지"를 세어야 했다.
+   ⚠️border-collapse + sticky 조합에서는 붙어 있는 칸의 테두리가 스크롤 중 사라진다 →
+   테두리를 inset box-shadow로 한 번 더 그려 둔다 */
+.sched-scroll { max-height: calc(100dvh - 210px); overflow: auto; }
+
+/* 시간표 화면은 화면 높이에 맞춰 짠다: 위아래 고정 요소를 뺀 나머지를 표가 전부 먹는다.
+   그래야 표가 최대한 크면서도 아래 버튼줄이 항상 화면 안에 남는다
+   (노트북 + 윈도우 작업 표시줄이면 보이는 높이가 600px대까지 내려간다) */
+.editor-card { display: flex; flex-direction: column; height: calc(100dvh - 130px); }
+.editor-card .sched-scroll { flex: 1; min-height: 140px; max-height: none; }
+.sched-scroll thead th { position: sticky; z-index: 2; background: #fff; }
+.sched-scroll thead tr:first-child th { top: 0; box-shadow: inset 0 2px 0 var(--form-line), inset 0 -1px 0 var(--form-line); }
+.sched-scroll thead tr + tr th { top: 36px; box-shadow: inset 0 -1px 0 var(--form-line); }
+.sched-scroll .th-time { left: 0; z-index: 3; }
+.sched-scroll .td-time { position: sticky; left: 0; z-index: 1;
+  box-shadow: inset -2px 0 0 var(--form-line), inset 2px 0 0 var(--form-line); }
+.sched-table:not(.class-table) .th-day { height: 36px; }
 
 /* 점심 칸 — 개인 색을 덮는다. "누가 앉았나"보다 "점심시간"이 먼저 보여야 한다 */
 .td-time.lunch-row { background: var(--form-lunch) !important; color: var(--ink); font-weight: 700; }
@@ -376,3 +396,14 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); -w
 /* 입력이 막혔을 때 이유를 말하는 자리 */
 .form-error { font-size: 12.5px; color: var(--stamp); background: var(--stamp-tint); border: 1px solid #F6C9C9;
   border-radius: var(--r); padding: 8px 12px; margin: -10px 0 16px; }
+
+/* 화면이 낮으면(노트북 + 작업 표시줄) 표에 줄 공간을 안내 문구와 막대에서 뺀다 */
+@media (max-height: 760px) {
+  .editor-card .hover-hint { display: none; }
+  .editor-card .weekly-bar { padding: 6px 10px; gap: 3px 12px; margin-bottom: 8px; }
+  .editor-card .weekly-item { min-width: 152px; gap: 5px; }
+  .editor-card .weekly-name { font-size: 11.5px; min-width: 56px; }
+  .editor-card .weekly-h { font-size: 11px; min-width: 56px; }
+  .app-header { padding: 10px 28px 0; }
+  .app-title { font-size: 18px; }
+}
