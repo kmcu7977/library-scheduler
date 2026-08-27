@@ -21,6 +21,7 @@
   --accent: #D97706;       /* 강조색 하나 — 점심 띠와 마지막 동작(엑셀)에만 */
   --accent-tint: #FEF3C7;
   --accent-ink: #92400E;
+  --day-rule: #0B2452;     /* 요일 구분선 — 흰 바탕과 남색 머리글 양쪽에서 보이는 진한 남색 */
   --stamp: #DC2626;        /* 지우기·한도 초과 */
   --stamp-tint: #FEF0F0;
   --sand: #FEF3C7;         /* 점심 (강조색 계열) */
@@ -213,8 +214,10 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); -w
    요일 사이에 굵은 남색 선을 넣어 끊는다(사서 요청, 08-27).
    ⚠️여백(종이색 홈)으로 끊어봤더니 표가 다섯 장으로 잘린 것처럼 보여 되돌렸다 — 표는 하나로 두고 선으로만 나눈다.
    ⚠️impeccable detector가 side-tab(카드 옆 강조 띠)으로 잡지만 오탐이다: 카드가 아니라 열 그룹 사이 괘선이다 */
-.sched-table:not(.class-table) .day-start { border-left: 3px solid var(--navy); }
-.sched-table .th-day.day-start { border-left: 3px solid #FFFFFF; }   /* 남색 머리글 위에선 흰 선이 경계 */
+/* 요일 구분선은 요일 머리글 맨 위부터 표 바닥까지 한 줄로 이어진다.
+   남색 머리글 위에서도 보이도록 더 진한 남색을 쓴다 — 흰 선으로 끊으면 머리글만 따로 노는 것처럼 보인다 */
+.sched-table:not(.class-table) .day-start,
+.sched-table .th-day.day-start { border-left: 5px solid var(--day-rule); }
 .sched-table:not(.class-table) tr > *:last-child { border-right: 2px solid var(--rule-2); }
 .sched-table .th-day { border-top: none; height: 34px; font-size: 13.5px; letter-spacing: .3em; }
 .sched-table .th-floor { height: 26px; }
