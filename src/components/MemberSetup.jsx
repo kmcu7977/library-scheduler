@@ -80,7 +80,7 @@ export default function MemberSetup({ members, setMembers, onNext, onBack }) {
               <span className="pref-col-name" style={{ color: m.color, fontWeight: 700, cursor: "pointer" }}
                 title="클릭하여 수정" onClick={() => openEdit(m)}>{m.name}</span>
               <span style={{ flex: 1, fontSize: 11, color: "#607d8b" }}>
-                {m.dept || <span style={{ color: "#b0bec5" }}>—</span>}
+                {m.dept || <span style={{ color: "#B9CCE6" }}>·</span>}
                 {m.studentId && <span style={{ color: "#546e7a", marginLeft: 6 }}>({m.studentId})</span>}
               </span>
               <span style={{ minWidth: 110, fontSize: 11, color: "#607d8b" }}>{m.phone || <span style={{ color: "#b0bec5" }}>—</span>}</span>

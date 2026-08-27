@@ -20,7 +20,7 @@ export const openClassTab = mode =>
 function ClassGridTable({ mode, days, hours, grid, freeGrid }) {
   const fmt = c => `${c.startHour}:${String(c.startMin).padStart(2, "0")}~${c.endHour}:${String(c.endMin).padStart(2, "0")}`;
   const chip = (key, name, color, title) => (
-    <span key={key} className="class-chip" style={{ background: (color || "#90a4ae") + "26", color: color || "#546e7a" }} title={title}>
+    <span key={key} className="class-chip" style={{ background: (color || "#90a4ae") + "33", color: color || "#455A75" }} title={title}>
       {name}
     </span>
   );
@@ -113,7 +113,7 @@ export default function ClassTimetable({ members, cfg, onClose }) {
           <h3 className="panel-title">학생 수업시간표</h3>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <button className="btn-back" style={{ padding: "6px 14px" }}
-              title="지금 보고 있는 화면을 새 탭으로 엽니다 — 근무표 창 옆에 붙여 놓고 쓰세요"
+              title="지금 보고 있는 화면을 새 탭으로 엽니다. 근무표 창 옆에 붙여 놓고 쓰세요"
               onClick={() => openClassTab(mode)}>새 탭으로 열기</button>
             <button className="btn-back" style={{ padding: "6px 14px" }} onClick={onClose}>닫기</button>
           </div>

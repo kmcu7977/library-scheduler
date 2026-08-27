@@ -5,27 +5,27 @@
  * 인주색(--stamp)은 확정과 경고에만 쓴다. 흔해지면 경고가 경고로 안 보인다.
  */
 @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css');
-@import url('https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap');
 
 :root {
   --sans: 'Pretendard Variable', Pretendard, system-ui, 'Malgun Gothic', sans-serif;
-  --serif: 'Gowun Batang', Batang, serif;
 
-  --paper: #F1F2EE;        /* 바탕 — 열람실 책상 매트 */
+  --paper: #F1F5FB;        /* 바탕 */
   --sheet: #FFFFFF;        /* 종이 */
-  --ink: #1C2430;          /* 먹 */
-  --ink-2: #5D6975;
-  --ink-3: #8C949D;
-  --rule: #DBDDD6;         /* 괘선 */
-  --rule-2: #C3C7BE;
-  --navy: #22405C;         /* 표제·표 머리 */
-  --navy-tint: #EAEEF1;
-  --stamp: #9C2B2B;        /* 인주 — 확정·오류 */
-  --stamp-tint: #F7EDEB;
-  --sand: #EFE5CE;         /* 점심 */
-  --sand-ink: #7A5B18;
-  --field: #FBFBF9;
-
+  --ink: #0F172A;          /* 본문 */
+  --ink-2: #475569;
+  --ink-3: #8A99AE;
+  --rule: #DBE7F5;         /* 괘선 */
+  --rule-2: #B9CCE6;
+  --navy: #1E40AF;         /* 주색 — 표 머리·주요 버튼 */
+  --navy-tint: #E4EDFB;
+  --accent: #D97706;       /* 강조색 하나 — 점심 띠와 마지막 동작(엑셀)에만 */
+  --accent-tint: #FEF3C7;
+  --accent-ink: #92400E;
+  --stamp: #DC2626;        /* 지우기·한도 초과 */
+  --stamp-tint: #FEF0F0;
+  --sand: #FEF3C7;         /* 점심 (강조색 계열) */
+  --sand-ink: #92400E;
+  --field: #F8FAFC;
   --r: 3px;
   --sp: 8px;
 }
@@ -41,7 +41,7 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); -w
 .header-accent { display: none; }
 .header-top { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; padding-bottom: 20px; }
 .masthead-eyebrow { font-size: 11px; font-weight: 600; letter-spacing: .22em; color: var(--ink-3); margin-bottom: 8px; }
-.app-title { font-family: var(--serif); font-size: 27px; font-weight: 700; color: var(--ink); letter-spacing: -.01em; line-height: 1.25; }
+.app-title { font-size: 26px; font-weight: 800; color: var(--ink); letter-spacing: -.035em; line-height: 1.25; }
 .masthead-meta { font-size: 12px; color: var(--ink-2); margin-top: 7px; font-variant-numeric: tabular-nums; }
 .header-actions { display: flex; align-items: center; gap: 16px; padding-bottom: 2px; }
 .save-indicator { font-size: 12px; color: var(--ink-3); transition: color .3s; }
@@ -70,16 +70,20 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); -w
 /* ── 종이 ───────────────────────────────────────────── */
 .step-card { background: var(--sheet); border: 1px solid var(--rule); border-radius: var(--r); padding: 30px 32px; width: 100%; max-width: 660px; }
 .step-card.wide { max-width: calc(100vw - 80px); }
-.step-title { font-family: var(--serif); font-size: 19px; font-weight: 700; color: var(--ink); margin-bottom: 6px; }
+.step-title { font-size: 18px; font-weight: 800; color: var(--ink); letter-spacing: -.025em; margin-bottom: 6px; }
 .step-desc { font-size: 13px; color: var(--ink-2); margin-bottom: 20px; line-height: 1.7; }
-.panel-title { font-family: var(--serif); font-size: 17px; font-weight: 700; color: var(--ink); margin: 0; }
+.panel-title { font-size: 16px; font-weight: 800; color: var(--ink); letter-spacing: -.02em; margin: 0; }
 
 /* ── 조작 요소 ──────────────────────────────────────── */
-.btn-next, .btn-primary, .btn-export, .snap-primary {
+.btn-next, .btn-primary, .snap-primary {
   background: var(--navy); color: #fff; border: 1px solid var(--navy); border-radius: var(--r);
   padding: 10px 22px; font-size: 13.5px; font-weight: 600; cursor: pointer; font-family: inherit; transition: background .15s;
 }
-.btn-next:hover, .btn-primary:hover, .btn-export:hover, .snap-primary:hover { background: #17324a; }
+.btn-next:hover, .btn-primary:hover, .snap-primary:hover { background: #1A3691; }
+/* 이 화면의 마지막 동작. 강조색은 이것과 점심 띠에만 쓴다 */
+.btn-export { background: #B45309; color: #fff; border: 1px solid #B45309; border-radius: var(--r);
+  padding: 10px 22px; font-size: 13.5px; font-weight: 600; cursor: pointer; font-family: inherit; transition: background .15s; }
+.btn-export:hover { background: #92400E; }
 .btn-back {
   background: var(--sheet); color: var(--ink-2); border: 1px solid var(--rule-2); border-radius: var(--r);
   padding: 10px 18px; font-size: 13.5px; font-weight: 500; cursor: pointer; font-family: inherit; transition: border-color .15s, color .15s;
@@ -175,7 +179,7 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); -w
 
 /* 확인이 필요한 배치 — 막지 않고 알리기만 한다 */
 .audit-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 0 0 16px; padding: 9px 13px; border-radius: var(--r);
-  font-size: 12px; background: #FBF6E9; border: 1px solid #E2D5AE; color: var(--sand-ink); }
+  font-size: 12px; background: var(--accent-tint); border: 1px solid #F0CE8A; color: var(--accent-ink); }
 .audit-bar.audit-error { background: var(--stamp-tint); border-color: #E2C3BE; color: var(--stamp); }
 .audit-bar span { display: flex; flex-wrap: wrap; gap: 5px; }
 .audit-bar em { font-style: normal; font-size: 11px; background: #ffffffcc; border-radius: 2px; padding: 1px 6px; }
@@ -187,7 +191,7 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); -w
 .sched-table th, .sched-table td { border: 1px solid var(--rule); text-align: center; padding: 6px 4px; white-space: pre-line; }
 .th-time { background: var(--navy-tint); color: var(--ink-3); font-weight: 600; width: 96px; font-size: 11.5px; }
 .th-day { background: var(--navy); color: #fff; font-weight: 600; font-size: 12.5px; letter-spacing: .22em; padding: 8px 4px; }
-.sched-table .th-day.alt { background: #2A4D6E; }
+.sched-table .th-day.alt { background: #2555C9; }
 .th-floor { background: var(--navy-tint); color: var(--navy); font-weight: 600; font-size: 11px; letter-spacing: .04em; border-bottom: 1px solid var(--rule-2); }
 .td-time { background: var(--navy-tint); color: var(--ink-2); font-size: 11px; width: 96px; line-height: 1.5; font-variant-numeric: tabular-nums; }
 .td-cell { cursor: pointer; font-size: 12.5px; position: relative; }
@@ -203,14 +207,14 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); -w
 .sched-table .th-day { border-top: none; border-left-color: #ffffff40; border-right-color: #ffffff40; }
 
 /* 점심 칸 — 개인 색을 덮는다. "누가 앉았나"보다 "점심시간"이 먼저 보여야 한다 */
-.sched-table .lunch-cell { border-top-color: #DCCFAE; border-bottom-color: #DCCFAE; }
+.sched-table .lunch-cell { border-top-color: #EBCF92; border-bottom-color: #EBCF92; }
 .td-time.lunch-row { background: var(--sand); color: var(--sand-ink); font-weight: 600; }
 
 /* 사서가 확정한 칸 — 압정 그림 대신 인주색 모서리 표식 */
 /* 사서가 확정한 칸. 거의 모든 칸이 확정인 운영 상태라 눈에 띄면 소음이 된다 —
    "자동으로 채워질 수 있는 칸"과 구분되는 정도로만 낮게 깐다 */
 .td-cell.pin-cell::before { content: ''; position: absolute; top: 0; right: 0; width: 0; height: 0;
-  border-width: 4px; border-style: solid; border-color: rgba(34,64,92,.4) rgba(34,64,92,.4) transparent transparent; }
+  border-width: 4px; border-style: solid; border-color: rgba(30,64,175,.5) rgba(30,64,175,.5) transparent transparent; }
 
 /* ── 팝업 ──────────────────────────────────────────── */
 .cell-popup-overlay { position: fixed; inset: 0; background: rgba(28,36,48,.34); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 20px; }
@@ -236,8 +240,8 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); -w
 .rec-now { background: var(--rule); color: var(--ink-2); font-size: 9px; font-weight: 700; border-radius: 2px; padding: 1px 4px; }
 .rec-why { display: flex; flex-wrap: wrap; gap: 3px; }
 .rec-why em { font-style: normal; font-size: 10.5px; color: var(--ink-2); background: var(--field); border: 1px solid var(--rule); border-radius: 2px; padding: 0 5px; }
-.rec-why em.rec-bad { color: var(--stamp); background: var(--stamp-tint); border-color: #E6CCC8; }
-.rec-why em.rec-warn { color: var(--sand-ink); background: #FBF6E9; border-color: #E7DCBE; }
+.rec-why em.rec-bad { color: var(--stamp); background: var(--stamp-tint); border-color: #F6C9C9; }
+.rec-why em.rec-warn { color: var(--accent-ink); background: var(--accent-tint); border-color: #F0CE8A; }
 .rec-remain { font-size: 10.5px; color: var(--ink-3); white-space: nowrap; font-variant-numeric: tabular-nums; }
 
 /* 칸에 마우스를 올렸을 때 뜨는 대체 인원 */
@@ -274,7 +278,7 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); -w
 .class-filter { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 12px; }
 .class-pick { background: none; border: 1px solid var(--rule-2); color: var(--ink-2); border-radius: var(--r); padding: 3px 10px; font-size: 11.5px; font-weight: 500; cursor: pointer; font-family: inherit; }
 .class-pick:hover { background: var(--field); }
-.class-table .td-free { background: #F7FAF6; }
+.class-table .td-free { background: #F0F7FF; }
 
 /* 수업시간표·미리보기 전용 탭 */
 .class-page .app-main { padding: 24px 24px 40px; }
@@ -308,13 +312,13 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); -w
 /* ── 버전 보관함 ───────────────────────────────────── */
 .snap-modal { max-width: min(900px, 94vw); width: 900px; }
 .snap-lead { font-size: 12.5px; color: var(--ink-2); line-height: 1.75; margin-bottom: 14px; }
-.snap-msg { font-size: 12.5px; color: var(--stamp); background: var(--stamp-tint); border: 1px solid #E6CCC8; border-radius: var(--r); padding: 8px 12px; margin-bottom: 10px; }
+.snap-msg { font-size: 12.5px; color: var(--stamp); background: var(--stamp-tint); border: 1px solid #F6C9C9; border-radius: var(--r); padding: 8px 12px; margin-bottom: 10px; }
 .snap-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 @media (max-width: 720px) { .snap-grid { grid-template-columns: 1fr; } }
 .snap-card { border: 1px solid var(--rule-2); border-radius: var(--r); padding: 14px; background: var(--sheet); display: flex; flex-direction: column; gap: 5px; }
 .snap-card.empty { background: var(--field); border-style: dashed; border-color: var(--rule-2); }
 .snap-slot { font-size: 10.5px; font-weight: 700; letter-spacing: .1em; color: var(--ink-3); }
-.snap-name { font-family: var(--serif); font-size: 15px; font-weight: 700; color: var(--ink); word-break: break-all; }
+.snap-name { font-size: 14.5px; font-weight: 700; color: var(--ink); letter-spacing: -.01em; word-break: break-all; }
 .snap-time { font-size: 11.5px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
 .snap-desc { font-size: 12px; color: var(--ink-2); line-height: 1.6; word-break: break-all; }
 .snap-sum { font-size: 11.5px; color: var(--ink-3); }
@@ -323,15 +327,15 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); -w
 .snap-actions .btn-back, .snap-actions .snap-primary { padding: 6px 11px; font-size: 12px; }
 .snap-form { display: flex; flex-direction: column; gap: 6px; }
 .snap-input { margin-left: 0; width: 100%; resize: vertical; padding: 7px 9px; font-size: 12.5px; }
-.snap-warn { font-size: 11.5px; color: var(--sand-ink); background: #FBF6E9; border: 1px solid #E7DCBE; border-radius: var(--r); padding: 6px 8px; }
+.snap-warn { font-size: 11.5px; color: var(--accent-ink); background: var(--accent-tint); border: 1px solid #F0CE8A; border-radius: var(--r); padding: 6px 8px; }
 .snap-undo { font-size: 12px; color: var(--ink-2); margin-top: 16px; padding-top: 13px; border-top: 1px solid var(--rule); }
 
 /* 지우는 동작 — 인주색은 여기와 경고에만 */
-.btn-danger { color: var(--stamp); border-color: #DDBFBA; }
+.btn-danger { color: var(--stamp); border-color: #F0BDBD; }
 .btn-danger:hover { border-color: var(--stamp); color: var(--stamp); }
 .btn-danger-solid { background: var(--stamp); color: #fff; border: 1px solid var(--stamp); border-radius: var(--r);
   padding: 10px 22px; font-size: 13.5px; font-weight: 600; cursor: pointer; font-family: inherit; }
-.btn-danger-solid:hover { background: #872424; }
-.danger-list { display: block; margin-top: 10px; padding: 11px 13px; background: var(--stamp-tint); border: 1px solid #E6CCC8;
+.btn-danger-solid:hover { background: #B91C1C; }
+.danger-list { display: block; margin-top: 10px; padding: 11px 13px; background: var(--stamp-tint); border: 1px solid #F6C9C9;
   border-radius: var(--r); color: var(--stamp); font-size: 12.5px; text-align: left; line-height: 1.9; }
 .weekly-cap { margin-left: 4px; font-size: 10px; font-weight: 700; background: var(--navy); color: #fff; border-radius: 2px; padding: 1px 4px; }

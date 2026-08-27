@@ -56,7 +56,7 @@ export default function SchedulePreviewPage() {
             <p className="masthead-eyebrow">보관한 버전</p>
             <h1 className="app-title">{snap.name}</h1>
           </div>
-          <span className="save-indicator">미리보기 — 이 화면에서는 고칠 수 없습니다</span>
+          <span className="save-indicator">미리보기 · 이 화면에서는 고칠 수 없습니다</span>
         </div>
       </header>
       <main className="app-main">
@@ -103,8 +103,8 @@ export default function SchedulePreviewPage() {
                         const color = colorOf(name);
                         // 점심 칸은 개인 색을 덮는다 (근무표 화면과 같은 규칙)
                         const style = lunch
-                          ? { background: "#EFE5CE", color: name ? "#7A5B18" : "#B9AC8C", fontWeight: name ? 700 : 400 }
-                          : name ? { background: color + "14", boxShadow: `inset 3px 0 0 ${color}`, fontWeight: 600 } : {};
+                          ? { background: "#FEF3C7", color: name ? "#92400E" : "#C9B896", fontWeight: name ? 700 : 400 }
+                          : name ? { background: color + "26", color, boxShadow: `inset 3px 0 0 ${color}`, fontWeight: 700 } : {};
                         return (
                           <td key={`${day}-${fk}`}
                             className={`td-cell td-view ${name ? "" : "empty-cell"} ${fi === 0 ? "day-start" : ""} ${lunch ? "lunch-cell" : ""}`}
