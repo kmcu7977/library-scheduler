@@ -64,10 +64,11 @@ const names = arr => arr.map(x => x.name);
     ["월", "화", "수", "목", "금", "일"]);
 }
 
-// 6) 수업 미입력자는 따로 집계된다 (모든 시간에 비어 있는 것으로 보이므로 경고용)
+// 6) 수업을 입력하지 않은 사람은 모든 시간에 "근무 가능"으로 나온다 (경고 없이 그대로 — 정상 상태다)
 {
   const g = buildClassGrid([M("가", [cls("월", 10, 0, 11, 0)]), M("나"), M("다", [])], cfg);
-  assert.deepStrictEqual(names(g.noClass), ["나", "다"]);
+  assert.deepStrictEqual(names(g.freeGrid.월[10]), ["나", "다"]);
+  assert.deepStrictEqual(names(g.freeGrid.월[11]), ["가", "나", "다"]);
 }
 
 // 7) 인원이 아무도 없어도 축은 개관~폐관으로 서고, 칸은 빈다

@@ -31,5 +31,5 @@ export function buildClassGrid(members, cfg) {
     }
   }
 
-  return { days, hours, grid, freeGrid, noClass: members.filter(m => !(m.classes || []).length) };
+  return { days, hours, grid, freeGrid };
 }

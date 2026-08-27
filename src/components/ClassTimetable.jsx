@@ -79,7 +79,7 @@ export function ClassTimetableView({ members, cfg, mode, setMode }) {
   const shown = picked.length ? roster.filter(m => picked.includes(m.name)) : roster;
   const toggle = name => setPicked(p => (p.includes(name) ? p.filter(x => x !== name) : [...p, name]));
 
-  const { days, hours, grid, freeGrid, noClass } = useMemo(() => buildClassGrid(shown, cfg), [roster, picked, cfg]);
+  const { days, hours, grid, freeGrid } = useMemo(() => buildClassGrid(shown, cfg), [roster, picked, cfg]);
   const panes = mode === "split" ? ["class", "free"] : [mode];
 
   return (
@@ -118,14 +118,6 @@ export function ClassTimetableView({ members, cfg, mode, setMode }) {
           : mode === "free"
             ? <>칸에 있는 학생은 그 시간에 <b>수업이 없어</b> 근무를 넣을 수 있습니다.</>
             : <>같은 줄이 같은 시간대입니다 — 왼쪽은 그 시간에 <b>수업 중</b>인 학생, 오른쪽은 <b>근무를 넣을 수 있는</b> 학생입니다.</>}
-        {noClass.length > 0 && (
-          mode === "class"
-            ? <> · 수업 미입력: {noClass.map(m => m.name).join(", ")}</>
-            : <span style={{ display: "block", marginTop: 4, color: "#e65100" }}>
-                ⚠️ 수업을 입력하지 않은 <b>{noClass.length}명</b>({noClass.map(m => m.name).join(", ")})은
-                모든 시간에 비어 있는 것으로 나옵니다. 실제로 비는지는 확인이 필요합니다.
-              </span>
-        )}
       </p>
     </>
   );
