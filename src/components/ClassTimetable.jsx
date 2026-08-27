@@ -10,18 +10,12 @@ export const PANES = {
   free:  { pick: "근무 가능",      title: "🟢 근무 가능", tab: "근무 가능한 학생" },
 };
 
-// 두 화면을 나란히 보려면 탭을 두 개 띄운다 — 배치는 창 관리(윈도우 스냅)에 맡기는 편이
-// 한 표를 열 묶음으로 쪼개는 것보다 넓게 쓰고, 표도 원래 폭 그대로 남는다.
-// 창 이름을 모드별로 주므로 여러 번 눌러도 탭은 둘 뿐이고, 각 탭이 Firebase를 직접 구독해
-// 본 탭에서 수업을 고치면 새로고침 없이 따라온다
-const openTab = mode =>
+// 지금 보고 있는 화면을 그대로 새 탭에 띄운다. 창 이름을 모드별로 주므로
+// "수업 중"과 "근무 가능"은 서로 다른 탭이 되고, 같은 화면을 다시 열면 그 탭이 재사용된다.
+// 두 화면을 나란히 보고 싶으면 각각에서 한 번씩 누르면 된다 — 좌우 배치는 창 관리에 맡긴다.
+// 열린 탭은 Firebase를 직접 구독하므로 본 탭에서 수업을 고치면 새로고침 없이 따라온다
+export const openClassTab = mode =>
   window.open(`${window.location.pathname}${window.location.search}#classes/${mode}`, "libraryClassTab-" + mode);
-
-export const openClassTabs = () => {
-  const opened = ["class", "free"].map(openTab);
-  // 두 번째 창은 팝업 차단에 걸리는 브라우저가 있다 — 조용히 안 열리면 원인을 알 수 없으므로 알린다
-  if (opened.some(w => !w)) alert("탭이 열리지 않았습니다. 이 사이트의 팝업 차단을 해제해주세요.");
-};
 
 function ClassGridTable({ mode, days, hours, grid, freeGrid }) {
   const fmt = c => `${c.startHour}:${String(c.startMin).padStart(2, "0")}~${c.endHour}:${String(c.endMin).padStart(2, "0")}`;
@@ -119,8 +113,8 @@ export default function ClassTimetable({ members, cfg, onClose }) {
           <h3 style={{ margin: 0, fontSize: 15, color: "#1976d2" }}>📚 학생 수업시간표</h3>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <button className="btn-back" style={{ padding: "6px 14px" }}
-              title="수업 중 / 근무 가능 화면을 각각 새 탭으로 엽니다. 두 창을 좌우로 붙여 놓고 보세요"
-              onClick={openClassTabs}>🗗 탭 2개로 열기</button>
+              title="지금 보고 있는 화면을 새 탭으로 엽니다 — 근무표 창 옆에 붙여 놓고 쓰세요"
+              onClick={() => openClassTab(mode)}>🗗 새 탭</button>
             <button className="btn-back" style={{ padding: "6px 14px" }} onClick={onClose}>닫기</button>
           </div>
         </div>
