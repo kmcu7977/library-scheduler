@@ -210,10 +210,11 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); -w
 .td-cell.sel-cell { outline: 2px solid var(--navy); outline-offset: -2px; background: var(--navy-tint) !important; }
 
 /* 요일 경계 — 한 요일이 2층·3층×2·4층 네 칸이라, 가는 선으로는 네 칸이 한 요일로 안 묶인다.
-   선을 굵히는 대신 종이색 홈을 내서 표를 요일 다섯 덩어리로 끊는다(사서 요청, 08-27).
-   ⚠️impeccable detector가 이걸 side-tab(카드 옆 강조 띠)으로 잡지만 오탐이다 — 강조색이 아니라
-   배경색이고, 카드가 아니라 열 그룹 사이 여백이다. 지우지 말 것 */
-.sched-table:not(.class-table) .day-start { border-left: 9px solid var(--paper); }
+   요일 사이에 굵은 남색 선을 넣어 끊는다(사서 요청, 08-27).
+   ⚠️여백(종이색 홈)으로 끊어봤더니 표가 다섯 장으로 잘린 것처럼 보여 되돌렸다 — 표는 하나로 두고 선으로만 나눈다.
+   ⚠️impeccable detector가 side-tab(카드 옆 강조 띠)으로 잡지만 오탐이다: 카드가 아니라 열 그룹 사이 괘선이다 */
+.sched-table:not(.class-table) .day-start { border-left: 3px solid var(--navy); }
+.sched-table .th-day.day-start { border-left: 3px solid #FFFFFF; }   /* 남색 머리글 위에선 흰 선이 경계 */
 .sched-table:not(.class-table) tr > *:last-child { border-right: 2px solid var(--rule-2); }
 .sched-table .th-day { border-top: none; height: 34px; font-size: 13.5px; letter-spacing: .3em; }
 .sched-table .th-floor { height: 26px; }
