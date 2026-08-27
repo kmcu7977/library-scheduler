@@ -181,7 +181,7 @@ export default function ScheduleEditor({ members, schedule, setSchedule, pins, s
           </span>
         </div>
       )}
-      <div className="table-wrap">
+      <div className="table-wrap sched-scroll">
         <table className="sched-table">
           <thead>
             <tr>
@@ -247,10 +247,11 @@ export default function ScheduleEditor({ members, schedule, setSchedule, pins, s
                 const dimmed = r.conflicts.length > 0;
                 return (
                   <button key={m.name} className={`rec-row ${dimmed ? "rec-off" : ""} ${best ? "rec-best" : ""}`}
-                    style={{ borderColor: m.color + (dimmed ? "33" : "99") }}
+                    style={{}}
                     onClick={() => !dimmed && assignMember(m.name)}
                     title={dimmed ? r.conflicts.join(", ") : "이 사람으로 지정"}>
-                    <span className="rec-name" style={{ color: dimmed ? "var(--ink-3)" : m.color }}>
+                    <span className="rec-name" style={{ color: dimmed ? "var(--ink-3)" : "var(--ink)" }}>
+                      <i className="mark-dot" style={{ background: dimmed ? "var(--rule-2)" : m.color }} />
                       {best && <span className="rec-star">추천</span>}
                       {m.name}
                       {r.isCurrent && <span className="rec-now">현재</span>}

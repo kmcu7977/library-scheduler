@@ -77,7 +77,7 @@ export default function SchedulePreviewPage() {
                   </>}
             </div>
           </div>
-          <div className="table-wrap">
+          <div className="table-wrap sched-scroll">
             <table className="sched-table">
               <thead>
                 <tr>

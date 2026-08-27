@@ -209,10 +209,23 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); -w
 .empty-cell { color: #C9CDD2; }
 .td-cell.sel-cell { outline: 2px solid var(--navy); outline-offset: -2px; background: var(--navy-tint) !important; }
 
-/* 요일 경계 — 한 요일이 4칸이라 경계가 없으면 어디서 요일이 바뀌는지 안 보인다 */
-.sched-table:not(.class-table) .day-start { border-left: 2px solid var(--rule-2); }
+/* 요일 경계 — 한 요일이 2층·3층×2·4층 네 칸이라, 가는 선으로는 네 칸이 한 요일로 안 묶인다.
+   선을 굵히는 대신 종이색 홈을 내서 표를 요일 다섯 덩어리로 끊는다(사서 요청, 08-27).
+   ⚠️impeccable detector가 이걸 side-tab(카드 옆 강조 띠)으로 잡지만 오탐이다 — 강조색이 아니라
+   배경색이고, 카드가 아니라 열 그룹 사이 여백이다. 지우지 말 것 */
+.sched-table:not(.class-table) .day-start { border-left: 9px solid var(--paper); }
 .sched-table:not(.class-table) tr > *:last-child { border-right: 2px solid var(--rule-2); }
-.sched-table .th-day { border-top: none; border-left-color: #ffffff40; border-right-color: #ffffff40; }
+.sched-table .th-day { border-top: none; height: 34px; font-size: 13.5px; letter-spacing: .3em; }
+.sched-table .th-floor { height: 26px; }
+
+/* 근무표는 세로로도 스크롤되는 상자다 — 그래야 요일·층 머리글과 시간 열을 붙여둘 수 있다.
+   노트북 화면에서 아래로 내리면 머리글이 사라져 "이 열이 무슨 요일이지"를 세어야 했다 */
+.sched-scroll { max-height: calc(100dvh - 250px); overflow: auto; }
+.sched-scroll thead th { position: sticky; z-index: 2; }
+.sched-scroll thead tr:first-child th { top: 0; }
+.sched-scroll thead tr + tr th { top: 34px; }
+.sched-scroll .th-time { left: 0; z-index: 3; }
+.sched-scroll .td-time { position: sticky; left: 0; z-index: 1; }
 
 /* 점심 칸 — 개인 색을 덮는다. "누가 앉았나"보다 "점심시간"이 먼저 보여야 한다 */
 .sched-table .lunch-cell { border-top-color: #EBCF92; border-bottom-color: #EBCF92; }
@@ -238,7 +251,7 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); -w
 /* 칸 추천 — 적합한 순서로 세로 나열, 줄마다 근거를 붙인다 */
 .rec-list { display: flex; flex-direction: column; gap: 3px; max-height: 46vh; overflow-y: auto; }
 .rec-row { display: grid; grid-template-columns: minmax(74px, auto) 1fr auto; align-items: center; gap: 8px;
-  background: none; border: 1px solid var(--rule); border-left: 3px solid; border-radius: 0; padding: 7px 10px; cursor: pointer;
+  background: none; border: 1px solid var(--rule); border-radius: 0; padding: 7px 10px; cursor: pointer;
   font-family: inherit; font-size: 12.5px; text-align: left; transition: background .12s; }
 .rec-row:hover:not(.rec-off) { background: var(--field); }
 .rec-row.rec-off { cursor: not-allowed; background: #FAFAF8; }
