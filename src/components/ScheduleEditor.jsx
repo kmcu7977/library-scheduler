@@ -3,7 +3,7 @@ import { DAYS, FLOOR_KEYS, FLOOR_LABEL } from "../constants";
 import { isClassTime, isLunchSlot } from "../utils";
 import { recommend, audit } from "../recommend";
 import ScheduleCell from "./ScheduleCell";
-import ClassTimetable, { openClassTab } from "./ClassTimetable";
+import ClassTimetable, { openClassTabs } from "./ClassTimetable";
 import StatsPanel from "./StatsPanel";
 import { memberStats } from "../stats";
 
@@ -280,7 +280,7 @@ export default function ScheduleEditor({ members, schedule, setSchedule, pins, s
           {regenerating ? "⏳ 채우는 중..." : `🪄 빈칸 채우기${pinCount > 0 ? ` (📌${pinCount}칸 유지)` : ""}`}
         </button>
         <button className="btn-back" onClick={() => setShowClasses(true)}>📚 수업시간표</button>
-        <button className="btn-back" title="수업시간표를 새 탭에서 크게 봅니다 — 이 화면과 나란히 놓고 쓰세요" onClick={openClassTab}>🗗 새 탭</button>
+        <button className="btn-back" title="수업 중 / 근무 가능 화면을 각각 새 탭으로 엽니다 — 두 창을 좌우로 붙여 놓고 쓰세요" onClick={openClassTabs}>🗗 탭 2개로 열기</button>
         <button className="btn-back" onClick={() => setShowStats(true)}>📊 통계</button>
         {pinCount > 0 && (
           <button className="btn-back" style={{ color: "#f57f17", borderColor: "#f9a825" }}

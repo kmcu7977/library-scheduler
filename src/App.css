@@ -237,16 +237,8 @@
 .class-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
 .class-count { font-size: 11.5px; color: #90a4ae; font-weight: 700; }
 
-/* 나란히 보기 — 한 표 안에서 열 묶음을 둘로 나눈다.
-   표를 두 개 띄우면 칸에 든 이름 수가 달라 행 높이가 어긋나고, 같은 시간대가 좌우로 밀린다.
-   열이 두 배로 늘어나므로 이때만 폭을 내용에 맡긴다(고정 배분이면 칸이 짜부라진다) */
-.class-table.split-table { table-layout: auto; min-width: 100%; }
-.class-table .th-pane { font-size: 13px; letter-spacing: 0; padding: 7px 4px; }
-.class-table .th-pane-sub { font-size: 10.5px; font-weight: 500; color: #ffffffb0; letter-spacing: 0; margin-left: 4px; }
-.class-table .th-sub { font-size: 12px; border-top: none; letter-spacing: 1px; }
-.class-table .pane-start { border-left: 3px solid #0d47a1; }
+/* 근무 가능 화면은 칸 바탕을 달리해 두 탭을 눈으로 구분한다 */
 .class-table .td-free { background: #f4fbf5; }
-.class-modal.wide { width: min(1500px, 96vw); max-width: 96vw; }
 
 /* 수업시간표 전용 탭 (#classes) — 표가 화면 폭을 다 쓴다 */
 .class-page .app-main { padding: 24px 20px; }
