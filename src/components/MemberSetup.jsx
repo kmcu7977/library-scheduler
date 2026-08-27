@@ -154,7 +154,7 @@ export default function MemberSetup({ members, setMembers, onNext, onBack }) {
                   <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                     <span style={{ fontSize: 11, color: "var(--ink-3)", minWidth: 36 }}>1순위</span>
                     {FLOOR_OPTIONS.map(floor => {
-                      const color = members.find(m => m.name === editTarget)?.color || "var(--navy)";
+                      const color = members.find(m => m.name === editTarget)?.color || "#1E40AF"   // 알파를 이어붙이므로 var()가 아니라 hex여야 한다;
                       const sel = editInfo.preferFloor1 === floor;
                       return (
                         <button key={floor} className={"pref-floor-btn" + (sel ? " selected" : "")}
@@ -168,7 +168,7 @@ export default function MemberSetup({ members, setMembers, onNext, onBack }) {
                   <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                     <span style={{ fontSize: 11, color: "var(--ink-3)", minWidth: 36 }}>2순위</span>
                     {FLOOR_OPTIONS.map(floor => {
-                      const color = members.find(m => m.name === editTarget)?.color || "var(--navy)";
+                      const color = members.find(m => m.name === editTarget)?.color || "#1E40AF"   // 알파를 이어붙이므로 var()가 아니라 hex여야 한다;
                       const sel = editInfo.preferFloor2 === floor;
                       return (
                         <button key={floor} className={"pref-floor-btn" + (sel ? " selected" : "")}

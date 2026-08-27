@@ -162,7 +162,7 @@ export default function ScheduleEditor({ members, schedule, setSchedule, pins, s
               </span>
               <div className="weekly-track" style={{ display: "flex" }}>
                 <div style={{ width: `${dayPct}%`, height: "100%", background: over ? "var(--stamp)" : m.color, borderRadius: "3px 0 0 3px" }} />
-                <div style={{ width: `${nightPct}%`, height: "100%", background: over ? "var(--stamp)" : "var(--navy)", borderRadius: nightPct > 0 ? "0 3px 3px 0" : 0 }} />
+                <div style={{ width: `${nightPct}%`, height: "100%", background: over ? "#7F1D1D" : "var(--navy)", borderRadius: nightPct > 0 ? "0 3px 3px 0" : 0 }} />
               </div>
               <span className={`weekly-h ${over ? "over" : ""}`}>
                 {h} / {maxW}h{over && " 초과"}
