@@ -6,8 +6,8 @@ import { buildClassGrid } from "../classgrid";
 // 근무표와 같은 요일×시간 축을 쓴다 — 축이 달라지면 "이 시간에 누가 비나"를 눈으로 못 맞춘다.
 
 export const PANES = {
-  class: { pick: "수업 중",        title: "📕 수업 중",   tab: "수업 중인 학생" },
-  free:  { pick: "근무 가능",      title: "🟢 근무 가능", tab: "근무 가능한 학생" },
+  class: { pick: "수업 중",   title: "수업 중",   tab: "수업 중인 학생" },
+  free:  { pick: "근무 가능", title: "근무 가능", tab: "근무 가능한 학생" },
 };
 
 // 지금 보고 있는 화면을 그대로 새 탭에 띄운다. 창 이름을 모드별로 주므로
@@ -110,11 +110,11 @@ export default function ClassTimetable({ members, cfg, onClose }) {
     <div className="cell-popup-overlay" onClick={onClose}>
       <div className="cell-popup class-modal" onClick={e => e.stopPropagation()}>
         <div className="class-modal-head">
-          <h3 style={{ margin: 0, fontSize: 15, color: "#1976d2" }}>📚 학생 수업시간표</h3>
+          <h3 className="panel-title">학생 수업시간표</h3>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <button className="btn-back" style={{ padding: "6px 14px" }}
               title="지금 보고 있는 화면을 새 탭으로 엽니다 — 근무표 창 옆에 붙여 놓고 쓰세요"
-              onClick={() => openClassTab(mode)}>🗗 새 탭</button>
+              onClick={() => openClassTab(mode)}>새 탭으로 열기</button>
             <button className="btn-back" style={{ padding: "6px 14px" }} onClick={onClose}>닫기</button>
           </div>
         </div>

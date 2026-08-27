@@ -90,7 +90,7 @@ export default function ScheduleEditor({ members, schedule, setSchedule, pins, s
   // 지정한 칸은 자동배치가 손대지 않으므로, 배치 후 수업이 바뀌면 충돌이 조용히 남는다 → 눈에 보이게
   const issues = useMemo(() => audit(members, schedule, timeSlots, cfg), [members, schedule, timeSlots, cfg]);
 
-  // 수동 배치 = 자동 고정 (빈칸 채우기를 해도 유지), 비우기 = 고정 해제 + 칸 비움
+  // 수동 배치 = 확정 (빈칸 채우기를 해도 유지), 비우기 = 확정 해제 + 칸 비움
   const assignMember = name => {
     if (!editCell) return;
     setSchedule(prev => {
@@ -114,7 +114,7 @@ export default function ScheduleEditor({ members, schedule, setSchedule, pins, s
 
   const editPinned = !!editCell && editCell.cells.some(c => isPinned(c.day, c.si, c.fk));
 
-  // 시간표 전체 비우기 — 배치와 고정(📌)을 함께 지운다. 인원·수업 데이터는 그대로 둔다
+  // 시간표 전체 비우기 — 배치와 확정 표시를 함께 지운다. 인원·수업 데이터는 그대로 둔다
   const clearAll = () => {
     setSchedule(prev => Object.fromEntries(DAYS.map(day =>
       [day, (prev[day] || []).map(() => ({ f2: null, f3a: null, f3b: null, f4: null }))])));
@@ -141,10 +141,10 @@ export default function ScheduleEditor({ members, schedule, setSchedule, pins, s
   return (
     <div className="step-card wide">
       <div className="editor-header">
-        <h2 className="step-title" style={{ margin: 0 }}>③ 시간표 확인 및 수정</h2>
+        <h2 className="step-title" style={{ margin: 0 }}>시간표 확인 및 수정</h2>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <div className="cfg-badge">🕐 {cfg.openHour}:{String(cfg.openMin).padStart(2,"0")}~{cfg.closeHour}:{String(cfg.closeMin).padStart(2,"0")} · 기본 주{cfg.maxWeeklyHours}h / 일{cfg.maxDailyHours}h</div>
-          <div className="hover-hint">💡 드래그하면 가로·세로·대각선 어느 방향이든 영역으로 한 번에 지정합니다</div>
+          <div className="cfg-badge">{cfg.openHour}:{String(cfg.openMin).padStart(2,"0")}~{cfg.closeHour}:{String(cfg.closeMin).padStart(2,"0")} · 기본 주{cfg.maxWeeklyHours}h / 일{cfg.maxDailyHours}h</div>
+          <div className="hover-hint">드래그하면 여러 칸을 한 번에 지정합니다</div>
         </div>
       </div>
       <div className="weekly-bar">
@@ -157,7 +157,7 @@ export default function ScheduleEditor({ members, schedule, setSchedule, pins, s
             <div key={m.name} className="weekly-item">
               <span className="weekly-name" style={{ color: m.color }}>
                 {m.name}
-                {maxW !== cfg.maxWeeklyHours && <span style={{ marginLeft: 4, fontSize: 10, fontWeight: 700, background: "#1a237e", color: "#fff", borderRadius: 4, padding: "1px 4px" }}>{maxW}h</span>}
+                {maxW !== cfg.maxWeeklyHours && <span className="weekly-cap">{maxW}h</span>}
               </span>
               <div className="weekly-track" style={{ display: "flex" }}>
                 <div style={{ width: `${dayPct}%`, height: "100%", background: over ? "#e06c75" : m.color, borderRadius: "3px 0 0 3px" }} />
@@ -173,7 +173,7 @@ export default function ScheduleEditor({ members, schedule, setSchedule, pins, s
       </div>
       {issues.length > 0 && (
         <div className={`audit-bar ${issues.some(i => i.level === "error") ? "audit-error" : ""}`}>
-          <b>{issues.some(i => i.level === "error") ? "⚠️ 확인이 필요합니다" : "한도를 넘긴 배치가 있습니다"}</b>
+          <b>{issues.some(i => i.level === "error") ? "확인이 필요합니다" : "한도를 넘긴 배치가 있습니다"}</b>
           <span>
             {issues.slice(0, 4).map((i, k) => <em key={k} className={i.level}>{i.text}</em>)}
             {issues.length > 4 && <em>외 {issues.length - 4}건</em>}
@@ -267,8 +267,8 @@ export default function ScheduleEditor({ members, schedule, setSchedule, pins, s
             <div className="popup-members" style={{ marginTop: 12 }}>
               <button className="popup-member-btn clear-btn" onClick={() => assignMember(null)}>비우기</button>
               {editPinned && (
-                <button className="popup-member-btn clear-btn" style={{ color: "#f57f17", borderColor: "#f9a825" }} onClick={unpinCell}>
-                  📌 고정 해제
+                <button className="popup-member-btn clear-btn" onClick={unpinCell}>
+                  확정 해제
                 </button>
               )}
             </div>
@@ -277,20 +277,17 @@ export default function ScheduleEditor({ members, schedule, setSchedule, pins, s
       )}
       <div className="nav-row">
         <button className="btn-back" onClick={onBack}>← 뒤로</button>
-        <button className="btn-back" style={{ background: "#1976d2", color: "#fff", borderColor: "#1976d2" }}
-          onClick={handleRegenerate} disabled={regenerating}>
-          {regenerating ? "⏳ 채우는 중..." : `🪄 빈칸 채우기${pinCount > 0 ? ` (📌${pinCount}칸 유지)` : ""}`}
+        <button className="btn-next" onClick={handleRegenerate} disabled={regenerating}>
+          {regenerating ? "채우는 중..." : `빈칸 채우기${pinCount > 0 ? ` (확정 ${pinCount}칸 유지)` : ""}`}
         </button>
-        <button className="btn-back" onClick={() => setShowClasses(true)}>📚 수업시간표</button>
-        <button className="btn-back" onClick={() => setShowStats(true)}>📊 통계</button>
-        <button className="btn-back" onClick={() => setShowSnaps(true)}>📦 버전 보관</button>
+        <button className="btn-back" onClick={() => setShowClasses(true)}>수업시간표</button>
+        <button className="btn-back" onClick={() => setShowStats(true)}>통계</button>
+        <button className="btn-back" onClick={() => setShowSnaps(true)}>버전 보관</button>
         {pinCount > 0 && (
-          <button className="btn-back" style={{ color: "#f57f17", borderColor: "#f9a825" }}
-            onClick={() => setPins({})}>📌 전체 고정 해제</button>
+          <button className="btn-back" onClick={() => setPins({})}>확정 전체 해제</button>
         )}
-        <button className="btn-back" style={{ color: "#c62828", borderColor: "#ef9a9a" }}
-          onClick={() => setConfirmClear(true)}>🧹 시간표 비우기</button>
-        <button className="btn-export" onClick={onExport}>📥 엑셀 다운로드</button>
+        <button className="btn-back btn-danger" onClick={() => setConfirmClear(true)}>시간표 비우기</button>
+        <button className="btn-export" onClick={onExport}>엑셀 내려받기</button>
       </div>
       {showClasses && <ClassTimetable members={members} cfg={cfg} onClose={() => setShowClasses(false)} />}
       {showSnaps && <SnapshotPanel state={{ cfg, members, schedule, pins }} onRestore={onRestore} onClose={() => setShowSnaps(false)} />}
@@ -298,15 +295,14 @@ export default function ScheduleEditor({ members, schedule, setSchedule, pins, s
       {confirmClear && (
         <div className="cell-popup-overlay" onClick={() => setConfirmClear(false)}>
           <div className="cell-popup" onClick={e => e.stopPropagation()} style={{ maxWidth: 340, textAlign: "center" }}>
-            <p style={{ fontSize: 15, fontWeight: 700, color: "#c62828", marginBottom: 8 }}>🧹 시간표 비우기</p>
+            <p className="panel-title" style={{ color: "#9C2B2B", marginBottom: 10 }}>시간표 비우기</p>
             <p className="popup-title" style={{ marginBottom: 20 }}>
-              배치된 인원과 📌 고정이 모두 지워집니다.<br />
+              배치된 인원과 확정 표시가 모두 지워집니다.<br />
               <span style={{ fontSize: 12, color: "#90a4ae" }}>등록한 인원과 수업시간은 그대로 남습니다.</span>
             </p>
             <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
               <button className="btn-back" onClick={() => setConfirmClear(false)}>취소</button>
-              <button style={{ background: "#c62828", color: "#fff", border: "none", borderRadius: 10, padding: "11px 24px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
-                onClick={clearAll}>비우기</button>
+              <button className="btn-danger-solid" onClick={clearAll}>비우기</button>
             </div>
           </div>
         </div>

@@ -36,14 +36,14 @@ export default function SubTooltip({ members, day, si, fk, schedule, mousePos, v
   return (
     <div ref={tooltipRef} style={{ position: "fixed", top: pos.top, left: pos.left, zIndex: 9999 }} className="sub-tooltip">
       <div className="sub-tooltip-header">
-        <span>🔄 대체 가능 인원</span>
+        <span>대체 가능 인원</span>
         <span className="sub-slot-info">{day}요일 {timeSlots[si].label.split("\n")[0]} · {FLOOR_LABEL[fk]}</span>
       </div>
       {subs.length === 0 ? <div className="sub-empty">대체 가능 인원 없음</div> : (
         <>
           {subsFree.length > 0 && (
             <div className="sub-section">
-              <div className="sub-section-label free">✅ 여유 인원</div>
+              <div className="sub-section-label free">여유 인원</div>
               <div className="sub-chips">
                 {subsFree.map(m => (
                   <div key={m.name} className="sub-chip" style={{ borderColor: m.color + "99" }}>
@@ -56,7 +56,7 @@ export default function SubTooltip({ members, day, si, fk, schedule, mousePos, v
           )}
           {subsAssigned.length > 0 && (
             <div className="sub-section">
-              <div className="sub-section-label busy">⚠️ 타 층 배치 중</div>
+              <div className="sub-section-label busy">타 층 배치 중</div>
               <div className="sub-chips">
                 {subsAssigned.map(m => (
                   <div key={m.name} className="sub-chip" style={{ borderColor: m.color + "bb" }}>
@@ -71,7 +71,7 @@ export default function SubTooltip({ members, day, si, fk, schedule, mousePos, v
       )}
       {Object.keys(classesThisWeek).length > 0 && (
         <div className="sub-section" style={{ borderTop: "1px solid #eee", marginTop: 6, paddingTop: 6 }}>
-          <div className="sub-section-label" style={{ color: "#90a4ae" }}>📚 {currentName} 수업</div>
+          <div className="sub-section-label">{currentName} 수업</div>
           {dayOrder.filter(d => classesThisWeek[d]).map(d => (
             <div key={d} style={{ display: "flex", gap: 4, alignItems: "center", marginTop: 3 }}>
               <span style={{ fontSize: 10, fontWeight: 700, color: "#90a4ae", minWidth: 16 }}>{d}</span>

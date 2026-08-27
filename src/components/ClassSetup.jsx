@@ -12,7 +12,7 @@ export default function ClassSetup({ members, setMembers, onNext, onBack }) {
 
   return (
     <div className="step-card">
-      <h2 className="step-title">② 수업시간 입력</h2>
+      <h2 className="step-title">수업시간 입력</h2>
       <p className="step-desc">수업 시간은 자동 배치 제외 및 대체 인원 계산에 사용됩니다.</p>
       <div className="tab-row">
         {sortedByName(members).map(m => (

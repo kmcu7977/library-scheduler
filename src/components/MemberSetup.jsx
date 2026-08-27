@@ -32,7 +32,7 @@ export default function MemberSetup({ members, setMembers, onNext, onBack }) {
 
   return (
     <div className="step-card" style={{ maxWidth: 820 }}>
-      <h2 className="step-title">① 근로자 등록</h2>
+      <h2 className="step-title">근로자 등록</h2>
       <div className="member-form-grid">
         {[
           { f: "name",      label: "이름*",   ph: "이름",          cls: "mf-name", required: true },

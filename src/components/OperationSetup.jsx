@@ -27,16 +27,16 @@ export default function OperationSetup({ cfg, onNext }) {
 
   return (
     <div className="step-card" style={{ maxWidth: 680 }}>
-      <h2 className="step-title">⓪ 운영 설정</h2>
+      <h2 className="step-title">운영 설정</h2>
       <div className="preset-row">
         {Object.entries(PRESETS).map(([key, p]) => (
           <button key={key} className={`preset-btn ${preset === key ? "active" : ""}`} onClick={() => applyPreset(key)}>{p.label}</button>
         ))}
-        {!preset && <span className="preset-custom-tag">✏️ 커스텀</span>}
+        {!preset && <span className="preset-custom-tag">직접 지정함</span>}
       </div>
       <div className="cfg-grid">
         <div className="cfg-section">
-          <div className="cfg-section-title">🕐 운영 시간</div>
+          <div className="cfg-section-title">운영 시간</div>
           {[
             { label: "개관 시각", fH: "openHour", fM: "openMin" },
             { label: "폐관 시각", fH: "closeHour", fM: "closeMin" },
@@ -65,7 +65,7 @@ export default function OperationSetup({ cfg, onNext }) {
           </div>
         </div>
         <div className="cfg-section">
-          <div className="cfg-section-title">⏱ 근로 한도</div>
+          <div className="cfg-section-title">근로 한도</div>
           <div className="cfg-row">
             <label className="cfg-label" title="인원별로 20/40시간을 따로 정할 수 있고, 이 값은 정하지 않은 사람에게 적용됩니다">기본 주 근무시간</label>
             <div className="cfg-time-inputs">
@@ -90,7 +90,7 @@ export default function OperationSetup({ cfg, onNext }) {
         </div>
       </div>
       <div className="cfg-section" style={{ marginTop: 16 }}>
-        <div className="cfg-section-title">📄 엑셀 제목줄</div>
+        <div className="cfg-section-title">엑셀 제목줄</div>
         {[
           { field: "title", label: "제목", ph: defaultTitle() },
           { field: "effectiveDate", label: "시행일", ph: defaultEffectiveDate() },
@@ -104,7 +104,7 @@ export default function OperationSetup({ cfg, onNext }) {
         <div className="cfg-hint">비워두면 오늘 날짜로 자동 작성됩니다 (예: {defaultTitle()})</div>
       </div>
       <div className="preview-section">
-        <div className="preview-title">📋 시간 슬롯 미리보기</div>
+        <div className="preview-title">시간 슬롯 미리보기</div>
         <div className="preview-slots">
           {preview.map((s, i) => (
             <div key={i} className="preview-slot">

@@ -35,7 +35,7 @@ export default function SchedulePreviewPage() {
     <div className="class-page-msg" style={{ color: state.status === "loading" ? "#1976d2" : "#e06c75" }}>
       {state.status === "loading" ? "불러오는 중..."
         : state.status === "empty" ? "이 칸에는 보관된 버전이 없습니다."
-        : "⚠️ Firebase 연결에 실패했습니다."}
+        : "Firebase에 연결하지 못했습니다."}
     </div>
   );
 
@@ -52,8 +52,11 @@ export default function SchedulePreviewPage() {
       <header className="app-header">
         <div className="header-accent" />
         <div className="header-top">
-          <h1 className="app-title">보관한 시간표 <span>{snap.name}</span></h1>
-          <span className="save-indicator">🔒 미리보기 — 이 화면에서는 고칠 수 없습니다</span>
+          <div>
+            <p className="masthead-eyebrow">보관한 버전</p>
+            <h1 className="app-title">{snap.name}</h1>
+          </div>
+          <span className="save-indicator">미리보기 — 이 화면에서는 고칠 수 없습니다</span>
         </div>
       </header>
       <main className="app-main">
@@ -69,7 +72,7 @@ export default function SchedulePreviewPage() {
                 : <>
                     {restoring && restoring !== "busy" && <span className="snap-msg" style={{ margin: 0 }}>{restoring}</span>}
                     <button className="btn-back snap-primary" disabled={restoring === "busy"} onClick={restore}>
-                      {restoring === "busy" ? "불러오는 중..." : "📦 이 버전 불러오기"}
+                      {restoring === "busy" ? "불러오는 중..." : "이 버전 불러오기"}
                     </button>
                   </>}
             </div>
@@ -100,8 +103,8 @@ export default function SchedulePreviewPage() {
                         const color = colorOf(name);
                         // 점심 칸은 개인 색을 덮는다 (근무표 화면과 같은 규칙)
                         const style = lunch
-                          ? { background: "#ffe8c2", color: name ? "#8a4b00" : "#d2a25c", fontWeight: name ? 700 : 400 }
-                          : name ? { background: color + "28", color, fontWeight: 700 } : {};
+                          ? { background: "#EFE5CE", color: name ? "#7A5B18" : "#B9AC8C", fontWeight: name ? 700 : 400 }
+                          : name ? { background: color + "14", boxShadow: `inset 3px 0 0 ${color}`, fontWeight: 600 } : {};
                         return (
                           <td key={`${day}-${fk}`}
                             className={`td-cell td-view ${name ? "" : "empty-cell"} ${fi === 0 ? "day-start" : ""} ${lunch ? "lunch-cell" : ""}`}

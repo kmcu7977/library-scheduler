@@ -6,19 +6,19 @@ export default function ScheduleCell({ name, day, si, fk, members, schedule, act
   const [hovered, setHovered] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const color = members.find(m => m.name === name)?.color || "#aaa";
-  const baseStyle = name ? { background: color + "28", color, fontWeight: 700 } : {};
+  const baseStyle = name ? { background: color + "14", boxShadow: `inset 3px 0 0 ${color}`, fontWeight: 600 } : {};
   const dimStyle  = dim ? { background: "rgba(0,0,0,0.08)", color: "#b0bec5", fontWeight: 400 } : {};
-  const pinStyle  = pinned ? { boxShadow: "inset 0 0 0 2px #f9a825" } : {};
+  // 확정 칸 표식은 CSS(.pin-cell)가 모서리에 그린다 — 칸 안 글자와 다투지 않게
   // 점심시간 칸은 개인 색을 덮고 고정색으로 — 누가 앉았는지보다 "점심시간"이라는 게 먼저 보여야 한다
   const lunchStyle = lunch
-    ? { background: "#ffe8c2", color: name ? "#8a4b00" : "#d2a25c", fontWeight: name ? 700 : 400 }
+    ? { background: "#EFE5CE", color: name ? "#7A5B18" : "#B9AC8C", fontWeight: name ? 700 : 400 }
     : {};
   return (
     <td
       colSpan={colSpan || 1}
-      className={`td-cell ${active ? "active-cell" : ""} ${!name ? "empty-cell" : ""} ${selected ? "sel-cell" : ""} ${dayStart ? "day-start" : ""} ${lunch ? "lunch-cell" : ""}`}
-      style={{ ...baseStyle, ...lunchStyle, ...dimStyle, ...pinStyle }}
-      title={pinned ? "고정된 칸 (재배치해도 유지)" : undefined}
+      className={`td-cell ${active ? "active-cell" : ""} ${!name ? "empty-cell" : ""} ${selected ? "sel-cell" : ""} ${dayStart ? "day-start" : ""} ${lunch ? "lunch-cell" : ""} ${pinned ? "pin-cell" : ""}`}
+      style={{ ...baseStyle, ...lunchStyle, ...dimStyle }}
+      title={pinned ? "사서가 확정한 칸 — 빈칸 채우기를 해도 유지됩니다" : undefined}
       // 클릭도 드래그도 같은 경로 — 누른 칸에서 뗀 칸까지가 선택 범위가 된다 (한 칸이면 그 칸만)
       onMouseDown={e => { e.preventDefault(); setHovered(false); onDragStart?.(); }}
       onMouseEnter={e => {
@@ -28,7 +28,6 @@ export default function ScheduleCell({ name, day, si, fk, members, schedule, act
       onMouseMove={e => { if (name && !dragging) setMousePos({ x: e.clientX, y: e.clientY }); }}
       onMouseLeave={() => { setHovered(false); onHoverMember?.(null); }}
     >
-      {pinned && <span style={{ fontSize: 8, marginRight: 2 }}>📌</span>}
       {name || "·"}
       {hovered && !dragging && name && (
         <SubTooltip members={members} day={day} si={si} fk={fk}

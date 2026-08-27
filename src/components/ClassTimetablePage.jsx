@@ -24,7 +24,7 @@ export default function ClassTimetablePage() {
 
   if (state.status !== "done") return (
     <div className="class-page-msg" style={{ color: state.status === "error" ? "#e06c75" : "#1976d2" }}>
-      {state.status === "error" ? "⚠️ Firebase 연결에 실패했습니다." : "불러오는 중..."}
+      {state.status === "error" ? "Firebase에 연결하지 못했습니다." : "불러오는 중..."}
       {state.status === "error" && (
         <button className="btn-back" style={{ marginTop: 14 }} onClick={() => window.location.reload()}>다시 시도</button>
       )}
@@ -41,8 +41,11 @@ export default function ClassTimetablePage() {
       <header className="app-header">
         <div className="header-accent" />
         <div className="header-top">
-          <h1 className="app-title">학생 수업시간표 <span>{PANES[mode].title}</span></h1>
-          <span className="save-indicator">🔄 시간표 탭에서 수업을 고치면 여기도 바로 바뀝니다</span>
+          <div>
+            <p className="masthead-eyebrow">학생 수업시간표</p>
+            <h1 className="app-title">{PANES[mode].title}</h1>
+          </div>
+          <span className="save-indicator">시간표 탭에서 수업을 고치면 여기도 바로 바뀝니다</span>
         </div>
       </header>
       <main className="app-main">

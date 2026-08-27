@@ -51,11 +51,11 @@ export default function SnapshotPanel({ state, onRestore, onClose }) {
     <div className="cell-popup-overlay" onClick={onClose}>
       <div className="cell-popup snap-modal" onClick={e => e.stopPropagation()}>
         <div className="class-modal-head">
-          <h3 style={{ margin: 0, fontSize: 15, color: "#1976d2" }}>📦 버전 보관함</h3>
+          <h3 className="panel-title">버전 보관함</h3>
           <button className="btn-back" style={{ padding: "6px 14px" }} onClick={onClose}>닫기</button>
         </div>
         <p className="snap-lead">
-          지금 상태를 통째로(운영설정·인원·수업·시간표·📌고정) 3칸까지 남겨둘 수 있습니다.
+          지금 상태를 통째로(운영설정·인원·수업·시간표·확정 표시) 3칸까지 남겨둘 수 있습니다.
           자동저장은 그대로 돌아가고, 여기 담아둔 건 불러오기 전까지 바뀌지 않습니다.
         </p>
 
@@ -86,7 +86,7 @@ export default function SnapshotPanel({ state, onRestore, onClose }) {
                     <div className="snap-sum">{summarize(snap)}</div>
                     <div className="snap-actions">
                       <button className="btn-back snap-primary" onClick={() => setAsk({ snap })}>불러오기</button>
-                      <button className="btn-back" onClick={() => openSnapshotTab(slot)}>🗗 미리보기</button>
+                      <button className="btn-back" onClick={() => openSnapshotTab(slot)}>미리보기</button>
                       <button className="btn-back" onClick={() => startSave(slot)}>덮어쓰기</button>
                     </div>
                   </>
@@ -105,7 +105,7 @@ export default function SnapshotPanel({ state, onRestore, onClose }) {
 
         {auto && (
           <p className="snap-undo">
-            ↩ 마지막으로 불러오기 직전 상태가 {fmtSavedAt(auto.savedAt)}에 자동 보관되어 있습니다.
+            마지막으로 불러오기 직전 상태가 {fmtSavedAt(auto.savedAt)}에 자동 보관되어 있습니다.
             <button className="btn-back" style={{ marginLeft: 8, padding: "4px 12px" }}
               onClick={() => setAsk({ snap: auto, undo: true })}>직전 상태로 되돌리기</button>
           </p>
@@ -114,8 +114,8 @@ export default function SnapshotPanel({ state, onRestore, onClose }) {
         {ask && (
           <div className="cell-popup-overlay" onClick={() => setAsk(null)}>
             <div className="cell-popup" onClick={e => e.stopPropagation()} style={{ maxWidth: 340, textAlign: "center" }}>
-              <p style={{ fontSize: 15, fontWeight: 700, color: "#1565c0", marginBottom: 8 }}>
-                {ask.undo ? "↩ 직전 상태로 되돌리기" : "📦 이 버전 불러오기"}
+              <p className="panel-title" style={{ marginBottom: 10 }}>
+                {ask.undo ? "직전 상태로 되돌리기" : "이 버전 불러오기"}
               </p>
               <p className="popup-title" style={{ marginBottom: 18 }}>
                 지금 화면이 <b>«{ask.snap.name}»</b>({fmtSavedAt(ask.snap.savedAt)})으로 바뀝니다.<br />

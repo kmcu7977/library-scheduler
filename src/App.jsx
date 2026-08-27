@@ -99,7 +99,7 @@ export default function App() {
     setStep(3);
   };
 
-  // 빈칸 채우기 — 사서가 지정한 칸(📌)은 그대로 두고 나머지만 자동으로 채운다.
+  // 빈칸 채우기 — 사서가 확정한 칸은 그대로 두고 나머지만 자동으로 채운다.
   // 기존 시간표를 앵커로 함께 넘겨 이미 자동으로 채워졌던 칸도 되도록 유지한다(판이 통째로 섞이지 않게)
   const handleRegenerate = () => {
     const ts = buildTimeSlots(cfg);
@@ -138,7 +138,7 @@ export default function App() {
 
   if (loadStatus === "error") return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", background: "#e8f4fd", color: "#e06c75", fontSize: 15, fontFamily: "Noto Sans KR, sans-serif", gap: 16 }}>
-      <span>⚠️ Firebase 연결에 실패했습니다.</span>
+      <span>Firebase에 연결하지 못했습니다.</span>
       <span style={{ fontSize: 12, color: "#607d8b" }}>firebaseConfig 설정값을 확인하거나 네트워크 상태를 확인해주세요.</span>
       <button onClick={() => window.location.reload()} style={{ marginTop: 8, background: "#1976d2", color: "#fff", border: "none", borderRadius: 8, padding: "10px 24px", fontSize: 13, cursor: "pointer" }}>
         새로고침
@@ -151,12 +151,16 @@ export default function App() {
       <header className="app-header">
         <div className="header-accent" />
         <div className="header-top">
-          <h1 className="app-title">도서관 근로장학생 <span>시간표 생성기</span></h1>
+          <div>
+            <p className="masthead-eyebrow">도서관 근로장학생</p>
+            <h1 className="app-title">{cfg.title?.trim() || "근무시간표 편성"}</h1>
+            {cfg.effectiveDate?.trim() && <p className="masthead-meta">시행 {cfg.effectiveDate.trim()}</p>}
+          </div>
           <div className="header-actions">
             <span className={`save-indicator ${saveStatus === "saving" ? "saving" : saveStatus === "saved" ? "flash" : saveStatus === "error" ? "error" : ""}`}>
-              {saveStatus === "saving" ? "저장 중..." : saveStatus === "error" ? "⚠️ 저장 실패" : "💾 저장됨"}
+              {saveStatus === "saving" ? "저장 중..." : saveStatus === "error" ? "저장 실패" : "저장됨"}
             </span>
-            <button className="btn-reset" onClick={() => setShowResetConfirm(true)}>🗑 초기화</button>
+            <button className="btn-reset" onClick={() => setShowResetConfirm(true)}>전체 초기화</button>
           </div>
         </div>
         <div className="step-indicator">
@@ -165,7 +169,7 @@ export default function App() {
               style={{ cursor: canGoStep(i) && step !== i ? "pointer" : "default" }}
               title={canGoStep(i) ? "" : "인원을 먼저 등록해주세요"}
               onClick={() => step !== i && goStep(i)}>
-              <span>{i === 0 ? "⓪" : i}</span>
+              <span>{String(i).padStart(2, "0")}</span>
               <label>{s}</label>
             </div>
           ))}
@@ -188,22 +192,22 @@ export default function App() {
       {showResetConfirm && (
         <div className="cell-popup-overlay" onClick={() => setShowResetConfirm(false)}>
           <div className="cell-popup" onClick={e => e.stopPropagation()} style={{ maxWidth: 320, textAlign: "center" }}>
-            <p style={{ fontSize: 15, fontWeight: 700, color: "#e06c75", marginBottom: 8 }}>⚠️ 전체 초기화</p>
+            <p className="panel-title" style={{ color: "#9C2B2B", marginBottom: 10 }}>전체 초기화</p>
             <p className="popup-title" style={{ marginBottom: 16 }}>
               아래가 모두 삭제되며 되돌릴 수 없습니다.
-              <span style={{ display: "block", marginTop: 10, padding: "10px 12px", background: "#ffebee", borderRadius: 8, color: "#b71c1c", fontSize: 13, textAlign: "left", lineHeight: 1.8 }}>
+              <span className="danger-list">
                 · 등록한 인원 <b>{members.length}명</b>{members.length > 0 && <span style={{ fontSize: 11 }}> (학과·학번·연락처 포함)</span>}<br />
                 · 인원별 수업시간 <b>{members.reduce((a, m) => a + (m.classes?.length || 0), 0)}건</b><br />
-                · 작성한 시간표와 📌 고정<br />
+                · 작성한 시간표와 확정 표시<br />
                 · 운영 설정 (학기 중 기본값으로 되돌아감)
               </span>
               <span style={{ display: "block", marginTop: 10, fontSize: 12, color: "#607d8b" }}>
-                시간표만 지우시려면 시간표 화면의 <b>🧹 시간표 비우기</b>를 쓰세요.
+                시간표만 지우시려면 시간표 화면의 <b>시간표 비우기</b>를 쓰세요.
               </span>
             </p>
             <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
               <button className="btn-back" onClick={() => setShowResetConfirm(false)}>취소</button>
-              <button style={{ background: "#e06c75", color: "#fff", border: "none", borderRadius: 10, padding: "11px 24px", fontSize: 13, fontWeight: 700, cursor: "pointer" }} onClick={handleReset}>전부 삭제</button>
+              <button className="btn-danger-solid" onClick={handleReset}>전부 삭제</button>
             </div>
           </div>
         </div>

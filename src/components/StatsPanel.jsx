@@ -18,7 +18,7 @@ export default function StatsPanel({ members, schedule, timeSlots, cfg, onClose 
     <div className="cell-popup-overlay" onClick={onClose}>
       <div className="cell-popup class-modal" onClick={e => e.stopPropagation()}>
         <div className="class-modal-head">
-          <h3 style={{ margin: 0, fontSize: 15, color: "#1976d2" }}>📊 근무시간 통계</h3>
+          <h3 className="panel-title">근무시간 통계</h3>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <div className="mode-switch">
               {WEEK_OPTIONS.map(w => (
