@@ -35,7 +35,7 @@ export default function MemberSetup({ members, setMembers, onNext, onBack }) {
   };
 
   return (
-    <div className="step-card" style={{ maxWidth: 820 }}>
+    <div className="step-card member-setup-card" style={{ maxWidth: 820 }}>
       <h2 className="step-title">근로자 등록</h2>
       <div className="member-form-grid">
         {[

@@ -442,11 +442,6 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); -w
 .cell-popup .popup-members { margin-top: clamp(5px, 1.2vh, 12px) !important; }
 
 /* 인원 등록: 12명이 한 화면에 */
-.member-form-grid { padding: clamp(7px, 1.2vh, 16px); margin-bottom: clamp(8px, 1.6vh, 20px); gap: clamp(5px, 0.9vh, 10px); }
-.pref-table-row { padding: clamp(2px, 0.7vh, 10px) 12px; }
-.pref-table-row, .pref-table-header { font-size: clamp(11px, 1.3vh, 13px); }
-.pref-floor-btn, .hours-btn.sm { padding: clamp(1px, 0.4vh, 5px) 10px; }
-.member-pref-table { margin-bottom: clamp(8px, 1.4vh, 20px); }
 
 /* 운영 설정: 슬롯 미리보기와 섹션 여백을 화면에 맞춘다 */
 .preview-slots { max-height: none; overflow: visible; gap: clamp(3px, 0.5vh, 5px); }
@@ -478,25 +473,12 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); -w
 
 /* 화면이 낮으면 인원 목록에서 세부 열을 접는다 — 이름을 누르면 뜨는 수정 창에 그대로 다 있다 */
 @media (max-height: 900px) {
-  .pref-col-dept, .pref-col-phone, .pref-col-note { display: none !important; }
-  .pref-floors { flex-direction: row !important; align-items: center; gap: 10px !important; }
-  .pref-table-row { gap: 10px; }
 }
 
 /* 낮은 화면(≤900px): 세 준비 화면도 한 화면에 들어오게 접는다 */
 @media (max-height: 900px) {
   /* 인원 목록을 두 줄로 나눠 세로를 반으로 */
-  .member-pref-table { display: grid; grid-template-columns: 1fr 1fr; column-gap: 16px; row-gap: 0; }
-  .pref-table-header { display: none; }
   /* 추가 폼은 한 줄로 */
-  .member-form-grid { gap: 6px 8px; }
-  .mf-wide { width: 128px !important; }
-  .mf-phone { width: 118px !important; }
-  .mf-mid { width: 92px !important; }
-  .mf-name { width: 78px !important; }
-  .member-form-grid .text-input { padding: 5px 8px; font-size: 12.5px; }
-  .mf-label { font-size: 10.5px; }
-  .mf-add { padding: 6px 14px !important; }
   /* 수업 입력: 인원 탭과 목록을 촘촘하게 */
   .tab-btn { padding: 4px 9px; font-size: 12px; }
   .class-list .sel, .class-list .time-inp { padding: 3px 6px; font-size: 12px; }
@@ -520,9 +502,6 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); -w
   .step-desc { font-size: 12px; }
   .cfg-hint { font-size: 10.5px; }
   /* 인원 목록 두 칸일 때 줄이 접히지 않게 */
-  .pref-table-row { flex-wrap: nowrap; white-space: nowrap; }
-  .pref-floor-btn, .hours-btn.sm { padding: 1px 7px !important; font-size: 11px; }
-  .pref-col-name { min-width: 52px; }
   .step-title { font-size: 16px; }
 }
 
@@ -535,12 +514,10 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); -w
   .step-desc { margin-bottom: 8px; }
 }
 
-/* 인원이 12명이면 한 줄 목록은 큰 화면에서도 넘친다 — 폭이 되면 항상 두 칸으로 나눈다 */
-@media (min-width: 1180px) {
-  .member-pref-table { display: grid; grid-template-columns: 1fr 1fr; column-gap: 18px; row-gap: 0; }
-  .pref-table-header { display: none; }
-  .step-card[style] { max-width: 1120px !important; }   /* 인원 화면 폭 제한 해제 */
-}
 @media (max-height: 620px) {
   .nav-row { margin-top: 6px; padding-top: 6px; }
 }
+
+/* 인원 등록만 스크롤을 허용한다 (사용자 확정 2026-08-27).
+   12명이면 세부 열까지 한 화면에 넣을 수 없어서, 이 화면은 접지 않고 그대로 두고 스크롤로 본다 */
+.member-setup-card { max-height: none; }
