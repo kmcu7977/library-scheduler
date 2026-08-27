@@ -72,10 +72,10 @@ export default function MemberSetup({ members, setMembers, onNext, onBack }) {
           <div className="pref-table-header">
             <span style={{ minWidth: 24, fontSize: 11, color: "var(--ink-3)" }}>No</span>
             <span className="pref-col-name">이름</span>
-            <span style={{ flex: 1, fontSize: 11, color: "var(--ink-3)" }}>학과 / 학번</span>
-            <span style={{ minWidth: 110, fontSize: 11, color: "var(--ink-3)" }}>연락처</span>
+            <span className="pref-col-dept" style={{ flex: 1, fontSize: 11, color: "var(--ink-3)" }}>학과 / 학번</span>
+            <span className="pref-col-phone" style={{ minWidth: 110, fontSize: 11, color: "var(--ink-3)" }}>연락처</span>
             <span style={{ minWidth: 180, fontSize: 11, color: "var(--ink-3)" }}>선호 층 (1순위 / 2순위)</span>
-            <span style={{ minWidth: 70, fontSize: 11, color: "var(--ink-3)" }}>비고</span>
+            <span className="pref-col-note" style={{ minWidth: 70, fontSize: 11, color: "var(--ink-3)" }}>비고</span>
             <span style={{ minWidth: 96, fontSize: 11, color: "var(--ink-3)", textAlign: "center" }}>주 근무시간</span>
             <span style={{ minWidth: 28 }} />
           </div>
@@ -84,12 +84,12 @@ export default function MemberSetup({ members, setMembers, onNext, onBack }) {
               <span style={{ minWidth: 24, fontSize: 12, color: "var(--ink-2)" }}>{idx + 1}</span>
               <span className="pref-col-name" style={{ color: m.color, fontWeight: 700, cursor: "pointer" }}
                 title="클릭하여 수정" onClick={() => openEdit(m)}>{m.name}</span>
-              <span style={{ flex: 1, fontSize: 11, color: "var(--ink-2)" }}>
+              <span className="pref-col-dept" style={{ flex: 1, fontSize: 11, color: "var(--ink-2)" }}>
                 {m.dept || <span style={{ color: "#B9CCE6" }}>·</span>}
                 {m.studentId && <span style={{ color: "var(--ink-2)", marginLeft: 6 }}>({m.studentId})</span>}
               </span>
-              <span style={{ minWidth: 110, fontSize: 11, color: "var(--ink-2)" }}>{m.phone || <span style={{ color: "var(--ink-3)" }}>—</span>}</span>
-              <div style={{ minWidth: 180, display: "flex", flexDirection: "column", gap: 3 }}>
+              <span className="pref-col-phone" style={{ minWidth: 110, fontSize: 11, color: "var(--ink-2)" }}>{m.phone || <span style={{ color: "var(--ink-3)" }}>—</span>}</span>
+              <div className="pref-floors" style={{ minWidth: 180, display: "flex", flexDirection: "column", gap: 3 }}>
                 <div style={{ display: "flex", gap: 3, alignItems: "center" }}>
                   <span style={{ fontSize: 10, color: "var(--ink-3)", minWidth: 28 }}>1순위</span>
                   {FLOOR_OPTIONS.map(floor => (
@@ -113,7 +113,7 @@ export default function MemberSetup({ members, setMembers, onNext, onBack }) {
                   ))}
                 </div>
               </div>
-              <span style={{ minWidth: 70, fontSize: 11, color: "var(--ink-2)", overflow: "hidden", textOverflow: "ellipsis" }}>{m.note || ""}</span>
+              <span className="pref-col-note" style={{ minWidth: 70, fontSize: 11, color: "var(--ink-2)", overflow: "hidden", textOverflow: "ellipsis" }}>{m.note || ""}</span>
               <div style={{ minWidth: 96, display: "flex", gap: 3, justifyContent: "center" }}>
                 {WEEKLY_HOURS_OPTIONS.map(h => (
                   <button key={h} className={"hours-btn sm" + ((m.weeklyHours ?? WEEKLY_HOURS_OPTIONS[0]) === h ? " selected" : "")}

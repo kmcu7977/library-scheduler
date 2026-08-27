@@ -89,6 +89,7 @@ export default function OperationSetup({ cfg, onNext }) {
           </div>
         </div>
       </div>
+      <div className="cfg-bottom">
       <div className="cfg-section" style={{ marginTop: 16 }}>
         <div className="cfg-section-title">엑셀 제목줄</div>
         {[
@@ -114,6 +115,7 @@ export default function OperationSetup({ cfg, onNext }) {
             </div>
           ))}
         </div>
+      </div>
       </div>
       <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 20 }}>
         <button className="btn-next" onClick={() => onNext(localCfg)}>다음: 인원 등록 →</button>

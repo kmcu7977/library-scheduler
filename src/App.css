@@ -251,7 +251,17 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); -w
    그래야 표가 최대한 크면서도 아래 버튼줄이 항상 화면 안에 남는다
    (노트북 + 윈도우 작업 표시줄이면 보이는 높이가 600px대까지 내려간다) */
 .editor-card { display: flex; flex-direction: column; height: calc(100dvh - 130px); }
-.editor-card .sched-scroll { flex: 1; min-height: 140px; max-height: none; }
+.editor-card .sched-scroll { flex: 1; min-height: 0; max-height: none; overflow: hidden; }
+/* 스크롤은 어떤 화면에서도 만들지 않는다(사용자 확정). 값은 ScheduleEditor가 상자 높이를
+   실측해 --row-h / --cell-font / --cell-pad로 내려준다. 아래 기본값은 계산 전 한 프레임용 */
+.editor-card .sched-scroll { --row-h: 34px; --cell-font: 14px; --time-font: 12.5px; --cell-pad: 6px; }
+.editor-card .sched-table { height: 100%; }
+.editor-card .sched-table th,
+.editor-card .sched-table td { padding: var(--cell-pad) 4px; height: var(--row-h); }
+.editor-card .sched-table .td-cell { font-size: var(--cell-font); }
+.editor-card .sched-table .td-time { font-size: var(--time-font); line-height: 1.2; }
+.editor-card .sched-table .th-day { font-size: var(--cell-font); height: var(--row-h); letter-spacing: .18em; }
+.editor-card .sched-table .th-floor { font-size: var(--time-font); }
 .sched-scroll thead th { position: sticky; z-index: 2; background: #fff; }
 .sched-scroll thead tr:first-child th { top: 0; box-shadow: inset 0 2px 0 var(--form-line), inset 0 -1px 0 var(--form-line); }
 .sched-scroll thead tr + tr th { top: 36px; box-shadow: inset 0 -1px 0 var(--form-line); }
@@ -398,12 +408,139 @@ body { font-family: var(--sans); background: var(--paper); color: var(--ink); -w
   border-radius: var(--r); padding: 8px 12px; margin: -10px 0 16px; }
 
 /* 화면이 낮으면(노트북 + 작업 표시줄) 표에 줄 공간을 안내 문구와 막대에서 뺀다 */
+@media (max-height: 900px) {
+  .editor-card .weekly-bar { display: none; }   /* 같은 수치가 칸 팝업의 '여유 Nh'와 통계에 있다 */
+}
+@media (max-height: 820px) {
+  .editor-card .step-title { display: none; }          /* 위 단계줄이 이미 '시간표'라고 말한다 */
+  .editor-card .nav-row .btn-back,
+  .editor-card .nav-row .btn-next,
+  .editor-card .nav-row .btn-export,
+  .editor-card .nav-row .btn-danger-solid { padding: 7px 13px; font-size: 12.5px; }
+  .editor-card .nav-row { margin-top: 10px; padding-top: 9px; }
+  .editor-card { padding: 12px 14px; }
+}
 @media (max-height: 760px) {
   .editor-card .hover-hint { display: none; }
+  .editor-card .cfg-badge { display: none; }
   .editor-card .weekly-bar { padding: 6px 10px; gap: 3px 12px; margin-bottom: 8px; }
   .editor-card .weekly-item { min-width: 152px; gap: 5px; }
   .editor-card .weekly-name { font-size: 11.5px; min-width: 56px; }
   .editor-card .weekly-h { font-size: 11px; min-width: 56px; }
   .app-header { padding: 10px 28px 0; }
   .app-title { font-size: 18px; }
+}
+
+/* ── 어떤 화면에서도 스크롤을 만들지 않는다 (사용자 확정) ──────────────
+   화면이 낮을수록 줄 높이·글자·여백이 같이 줄어든다. 값은 vh에 묶어 해상도와 무관하게 동작한다 */
+
+/* 칸 팝업: 추천 12줄이 잘리지 않게 팝업 자체가 화면 높이까지 자란다 */
+.cell-popup { max-height: calc(100dvh - 16px); }
+.rec-list { max-height: none; overflow: visible; gap: clamp(1px, 0.25vh, 3px); }
+.rec-row { padding: clamp(2px, 0.7vh, 7px) 10px; font-size: clamp(10.5px, 1.35vh, 12.5px); }
+.popup-title { margin-bottom: clamp(6px, 1.4vh, 16px); font-size: clamp(12px, 1.5vh, 13.5px); }
+.cell-popup .popup-members { margin-top: clamp(5px, 1.2vh, 12px) !important; }
+
+/* 인원 등록: 12명이 한 화면에 */
+.member-form-grid { padding: clamp(7px, 1.2vh, 16px); margin-bottom: clamp(8px, 1.6vh, 20px); gap: clamp(5px, 0.9vh, 10px); }
+.pref-table-row { padding: clamp(2px, 0.7vh, 10px) 12px; }
+.pref-table-row, .pref-table-header { font-size: clamp(11px, 1.3vh, 13px); }
+.pref-floor-btn, .hours-btn.sm { padding: clamp(1px, 0.4vh, 5px) 10px; }
+.member-pref-table { margin-bottom: clamp(8px, 1.4vh, 20px); }
+
+/* 운영 설정: 슬롯 미리보기와 섹션 여백을 화면에 맞춘다 */
+.preview-slots { max-height: none; overflow: visible; gap: clamp(3px, 0.5vh, 5px); }
+.preview-slot { padding: clamp(1px, 0.4vh, 5px) 10px; }
+.cfg-section, .preview-section { padding: clamp(8px, 1.3vh, 16px) 16px; }
+.cfg-row { margin-bottom: clamp(4px, 0.9vh, 11px); }
+.cfg-grid { gap: clamp(8px, 1.3vh, 16px); margin-bottom: clamp(8px, 1.4vh, 20px); }
+.preset-row { margin-bottom: clamp(8px, 1.5vh, 22px); }
+.step-desc { margin-bottom: clamp(8px, 1.6vh, 20px); }
+
+/* 수업 입력 */
+.class-row { margin-bottom: clamp(3px, 0.7vh, 8px); }
+.tab-row { margin-bottom: clamp(8px, 1.4vh, 18px); }
+
+/* 통계·수업시간표 표: 모달이 화면을 넘지 않고, 표는 남은 높이에 맞춰 줄어든다 */
+.class-modal, .snap-modal { display: flex; flex-direction: column; max-height: calc(100dvh - 16px); }
+.class-modal .table-wrap { flex: 1; min-height: 0; max-height: none; overflow: hidden; }
+.class-modal .sched-table th, .class-modal .sched-table td { padding: clamp(1px, 0.4vh, 6px) 4px; }
+.stat-table td, .stat-table th { padding: clamp(1px, 0.45vh, 5px) 6px; }
+.stat-cards { margin-bottom: clamp(5px, 1.1vh, 14px); }
+.stat-card { padding: clamp(4px, 0.9vh, 11px) 14px; }
+.stat-card strong { font-size: clamp(14px, 2.1vh, 21px); }
+.class-table .td-class { height: auto; min-width: 84px; padding: clamp(1px, 0.35vh, 4px); }
+.class-chip { font-size: clamp(8.5px, 1.15vh, 10.5px); padding: 0 4px; margin: 0.5px; }
+.class-filter { margin-bottom: clamp(5px, 1.1vh, 12px); gap: 3px; }
+.class-pick { padding: clamp(1px, 0.4vh, 3px) 9px; font-size: clamp(10px, 1.2vh, 11.5px); }
+.class-foot { margin-top: clamp(5px, 1.1vh, 12px); font-size: clamp(10px, 1.2vh, 11.5px); }
+.class-modal-head { margin-bottom: clamp(6px, 1.2vh, 14px); padding-bottom: clamp(5px, 1vh, 12px); }
+
+/* 화면이 낮으면 인원 목록에서 세부 열을 접는다 — 이름을 누르면 뜨는 수정 창에 그대로 다 있다 */
+@media (max-height: 900px) {
+  .pref-col-dept, .pref-col-phone, .pref-col-note { display: none !important; }
+  .pref-floors { flex-direction: row !important; align-items: center; gap: 10px !important; }
+  .pref-table-row { gap: 10px; }
+}
+
+/* 낮은 화면(≤900px): 세 준비 화면도 한 화면에 들어오게 접는다 */
+@media (max-height: 900px) {
+  /* 인원 목록을 두 줄로 나눠 세로를 반으로 */
+  .member-pref-table { display: grid; grid-template-columns: 1fr 1fr; column-gap: 16px; row-gap: 0; }
+  .pref-table-header { display: none; }
+  /* 추가 폼은 한 줄로 */
+  .member-form-grid { gap: 6px 8px; }
+  .mf-wide { width: 128px !important; }
+  .mf-phone { width: 118px !important; }
+  .mf-mid { width: 92px !important; }
+  .mf-name { width: 78px !important; }
+  .member-form-grid .text-input { padding: 5px 8px; font-size: 12.5px; }
+  .mf-label { font-size: 10.5px; }
+  .mf-add { padding: 6px 14px !important; }
+  /* 수업 입력: 인원 탭과 목록을 촘촘하게 */
+  .tab-btn { padding: 4px 9px; font-size: 12px; }
+  .class-list .sel, .class-list .time-inp { padding: 3px 6px; font-size: 12px; }
+  .btn-add-class { padding: 4px 11px; font-size: 12px; }
+  /* 운영 설정: 엑셀 제목줄·미리보기를 두 칸으로 나란히 */
+  /* 슬롯 미리보기는 접는다 — 같은 내용(총 슬롯 수·운영 시간)이 바로 위 요약에 있다 */
+  .preview-section { display: none; }
+  .cfg-bottom { display: block; }
+  .cfg-bottom .cfg-section { margin-top: 0 !important; }
+  /* 잘라내는 대신 칩을 줄여 13개가 세 줄에 들어오게 한다 */
+  .preview-slots { max-height: none; overflow: visible; gap: 3px; }
+  .preview-slot { padding: 1px 6px; }
+  .preview-label { font-size: 11px; }
+  .preview-idx, .preview-hours { font-size: 10px; }
+  .cfg-section-title, .preview-title { margin-bottom: 8px; }
+  .cfg-summary { margin-top: 8px; padding-top: 8px; gap: 4px; }
+  .cfg-summary-item, .cfg-label { font-size: 12px; }
+  .class-list { margin-bottom: 6px; }
+  .nav-row { margin-top: 8px; padding-top: 8px; }
+  .no-class { margin-bottom: 6px; }
+  .step-desc { font-size: 12px; }
+  .cfg-hint { font-size: 10.5px; }
+  /* 인원 목록 두 칸일 때 줄이 접히지 않게 */
+  .pref-table-row { flex-wrap: nowrap; white-space: nowrap; }
+  .pref-floor-btn, .hours-btn.sm { padding: 1px 7px !important; font-size: 11px; }
+  .pref-col-name { min-width: 52px; }
+  .step-title { font-size: 16px; }
+}
+
+/* 720p 노트북(작업 표시줄 포함 실제 560px대)에서 마지막 10px까지 맞춘다 */
+@media (max-height: 620px) {
+  .app-main { padding: 10px 24px 12px; }
+  .preset-row { margin-bottom: 6px; }
+  .cfg-grid { margin-bottom: 8px; }
+  .step-title { margin-bottom: 2px; }
+  .step-desc { margin-bottom: 8px; }
+}
+
+/* 인원이 12명이면 한 줄 목록은 큰 화면에서도 넘친다 — 폭이 되면 항상 두 칸으로 나눈다 */
+@media (min-width: 1180px) {
+  .member-pref-table { display: grid; grid-template-columns: 1fr 1fr; column-gap: 18px; row-gap: 0; }
+  .pref-table-header { display: none; }
+  .step-card[style] { max-width: 1120px !important; }   /* 인원 화면 폭 제한 해제 */
+}
+@media (max-height: 620px) {
+  .nav-row { margin-top: 6px; padding-top: 6px; }
 }

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { DAYS, FLOOR_KEYS, FLOOR_LABEL } from "../constants";
 import { isClassTime, isLunchSlot } from "../utils";
 import { recommend, audit } from "../recommend";
@@ -88,6 +88,39 @@ export default function ScheduleEditor({ members, schedule, setSchedule, pins, s
   );
 
   // 지정한 칸은 자동배치가 손대지 않으므로, 배치 후 수업이 바뀌면 충돌이 조용히 남는다 → 눈에 보이게
+  // 표는 남은 높이에 정확히 맞춘다. 스크롤은 만들지 않기로 했으므로(사용자 확정),
+  // 상자 높이를 실측해 행 높이와 글자 크기를 거기서 역산한다 — 화면 크기·해상도와 무관하게 항상 한 화면.
+  const boxRef = useRef(null);
+  useEffect(() => {
+    const box = boxRef.current;
+    if (!box) return;
+    const fit = () => {
+      const table = box.querySelector("table");
+      if (!table) return;
+      const rows = timeSlots.length + 2;                 // 요일 줄 + 층 줄
+      // 1차 추정: 칸 테두리(행마다 1px)와 바깥 medium 2줄을 빼고 나눈다
+      let rowH = Math.floor((box.clientHeight - rows - 4) / rows);
+      const apply = () => {
+        box.style.setProperty("--row-h", `${Math.max(14, rowH)}px`);
+        box.style.setProperty("--cell-pad", `${Math.max(0, Math.min(9, Math.round(rowH * 0.14)))}px`);
+        const font = Math.max(9, Math.min(15, Math.round(rowH * 0.42)));
+        box.style.setProperty("--cell-font", `${font}px`);
+        box.style.setProperty("--time-font", `${Math.max(8, font - 1)}px`);
+      };
+      apply();
+      // 2차 보정: 점심칸 두 줄 라벨처럼 계산으로 안 잡히는 높이가 있다.
+      // 실제로 넘치는지 재보고, 맞을 때까지 한 칸씩 줄인다 — 스크롤이나 잘림을 남기지 않는다
+      for (let i = 0; i < 14 && table.scrollHeight > box.clientHeight && rowH > 14; i++) {
+        rowH -= 1;
+        apply();
+      }
+    };
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(box);
+    return () => ro.disconnect();
+  }, [timeSlots.length]);
+
   const issues = useMemo(() => audit(members, schedule, timeSlots, cfg), [members, schedule, timeSlots, cfg]);
 
   // 수동 배치 = 확정 (빈칸 채우기를 해도 유지), 비우기 = 확정 해제 + 칸 비움
@@ -181,7 +214,7 @@ export default function ScheduleEditor({ members, schedule, setSchedule, pins, s
           </span>
         </div>
       )}
-      <div className="table-wrap sched-scroll">
+      <div className="table-wrap sched-scroll" ref={boxRef}>
         <table className="sched-table">
           <thead>
             <tr>
