@@ -6,15 +6,12 @@ export default function ScheduleCell({ name, day, si, fk, members, schedule, act
   const [hovered, setHovered] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const color = members.find(m => m.name === name)?.color || "#aaa";
-  const baseStyle = name
-    ? { background: color + "26", color: `color-mix(in srgb, ${color} 62%, #0F172A)`, boxShadow: `inset 3px 0 0 ${color}`, fontWeight: 700 }
-    : {};
+  // 사서 양식 그대로: 칸에는 색을 쓰지 않는다. 사람 구분은 이름 글자와 마우스오버가 한다
+  const baseStyle = {};
   const dimStyle  = dim ? { background: "rgba(0,0,0,0.08)", color: "var(--ink-3)", fontWeight: 400 } : {};
   // 확정 칸 표식은 CSS(.pin-cell)가 모서리에 그린다 — 칸 안 글자와 다투지 않게
   // 점심시간 칸은 개인 색을 덮고 고정색으로 — 누가 앉았는지보다 "점심시간"이라는 게 먼저 보여야 한다
-  const lunchStyle = lunch
-    ? { background: "#FEF3C7", color: name ? "#92400E" : "#C9B896", fontWeight: name ? 700 : 400 }
-    : {};
+  const lunchStyle = lunch ? { background: "#D9E2F3" } : {};
   return (
     <td
       colSpan={colSpan || 1}

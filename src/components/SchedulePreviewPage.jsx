@@ -102,9 +102,7 @@ export default function SchedulePreviewPage() {
                         const name = schedule[day]?.[si]?.[fk] || "";
                         const color = colorOf(name);
                         // 점심 칸은 개인 색을 덮는다 (근무표 화면과 같은 규칙)
-                        const style = lunch
-                          ? { background: "#FEF3C7", color: name ? "#92400E" : "#C9B896", fontWeight: name ? 700 : 400 }
-                          : name ? { background: color + "26", color: `color-mix(in srgb, ${color} 62%, #0F172A)`, boxShadow: `inset 3px 0 0 ${color}`, fontWeight: 700 } : {};
+                        const style = lunch ? { background: "#D9E2F3" } : {};
                         return (
                           <td key={`${day}-${fk}`}
                             className={`td-cell td-view ${name ? "" : "empty-cell"} ${fi === 0 ? "day-start" : ""} ${lunch ? "lunch-cell" : ""}`}
